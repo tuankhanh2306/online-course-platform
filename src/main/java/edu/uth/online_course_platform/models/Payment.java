@@ -3,9 +3,8 @@ package edu.uth.online_course_platform.models;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "payments")
@@ -14,29 +13,26 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Payment {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "payment_id")
-    private Long id;
+    @Column(columnDefinition = "BIGINT UNSIGNED")
+    private Long paymentId;
 
     @ManyToOne
-    @JoinColumn(name = "enrollment_id", nullable = false)
+    @JoinColumn(name = "enrollment_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     private Enrollment enrollment;
 
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status = Status.PENDING;
+    @Column(nullable = false, length = 20)
+    private PaymentStatus status = PaymentStatus.PENDING;
 
-    @CreationTimestamp
-    @Column(name = "payment_date")
-    private LocalDateTime paymentDate;
-
-    public enum Status {
-        PENDING, SUCCESS, FAILED
+    public enum PaymentStatus {
+        PENDING,
+        SUCCESS,
+        FAILED
     }
 }
 

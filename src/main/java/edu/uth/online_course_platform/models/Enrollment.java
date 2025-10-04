@@ -4,6 +4,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "enrollments", uniqueConstraints = {
@@ -14,21 +15,19 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Enrollment {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "enrollment_id")
-    private Long id;
+    @Column(columnDefinition = "BIGINT UNSIGNED")
+    private Long enrollmentId;
 
     @ManyToOne
-    @JoinColumn(name = "student_id", nullable = false)
+    @JoinColumn(name = "student_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     private User student;
 
     @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
+    @JoinColumn(name = "course_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     private Course course;
 
-    @CreationTimestamp
-    @Column(name = "enrolled_at")
-    private LocalDateTime enrolledAt;
+    @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Payment> payments;
 }

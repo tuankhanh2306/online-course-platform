@@ -18,23 +18,22 @@ import java.time.LocalDateTime;
 public class Lesson {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "lesson_id")
-    private Long lesson_id;
+    @Column(columnDefinition = "BIGINT UNSIGNED")
+    private Long lessonId;
 
     @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
+    @JoinColumn(name = "course_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     private Course course;
 
-    @Column(name = "lesson_title", nullable = false)
-    private String lessonTitle;
+    @Column(nullable = false, length = 200)
+    private String title;
 
-    @Column(name = "drive_link", nullable = false, length = 500)
-    private String driveLink; // link Google Drive
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-    @Column(name = "lesson_order", nullable = false)
-    private Integer lessonOrder; // Thứ tự buổi học
+    @Column(nullable = false, length = 500)
+    private String driveLink;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private int orderIndex = 0;
 }
