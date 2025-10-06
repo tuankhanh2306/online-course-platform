@@ -28,10 +28,10 @@ public class Course {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.MERGE, orphanRemoval = true)
     private List<Lesson> lessons;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<Enrollment> enrollments;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)

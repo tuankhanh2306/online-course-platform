@@ -38,5 +38,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(value = IllegalAccessException.class)
+    public ResponseEntity<ApiResponse> handlingIllegalAccessException(IllegalAccessException e) {
+        ApiResponse response = new ApiResponse();
+        response.setCode(403);
+        response.setMessage(e.getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(value = ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse> handlingResourceNotFoundException(ResourceNotFoundException e) {
+        ApiResponse response = new ApiResponse();
+        response.setCode(404);
+        response.setMessage(e.getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
+
 }
 

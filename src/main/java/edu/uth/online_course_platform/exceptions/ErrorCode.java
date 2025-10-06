@@ -37,6 +37,7 @@ public enum ErrorCode {
     JWT_TOKEN_EXPIRED(1601, "Token đã hết hạn"),
     JWT_TOKEN_INVALID(1602, "Token không hợp lệ"),
     JWT_TOKEN_MISSING(1603, "Thiếu token xác thực"),
+    INVALID_CREDENTIALS(1604, "Mat khẩu hoặc email đăng nhập không đúng"),
 
     PASSWORD_CONFIRM_NOT_MATCH(1701,"Mật khẩu xác thực không đúng")
     ;

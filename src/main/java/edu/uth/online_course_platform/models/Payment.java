@@ -1,10 +1,13 @@
 package edu.uth.online_course_platform.models;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "payments")
@@ -20,10 +23,14 @@ public class Payment {
 
     @ManyToOne
     @JoinColumn(name = "enrollment_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @JsonIgnore
     private Enrollment enrollment;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -31,7 +38,8 @@ public class Payment {
 
     public enum PaymentStatus {
         PENDING,
-        SUCCESS,
+        PARTIAL,
+        COMPLETED,
         FAILED
     }
 }

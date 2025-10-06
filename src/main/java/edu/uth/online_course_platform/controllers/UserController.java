@@ -3,11 +3,13 @@ package edu.uth.online_course_platform.controllers;
 import edu.uth.online_course_platform.dto.request.ChangePasswordRequest;
 import edu.uth.online_course_platform.dto.request.UserCreateDto;
 import edu.uth.online_course_platform.dto.response.ApiResponse;
+import edu.uth.online_course_platform.dto.response.EnrollmentResponse;
 import edu.uth.online_course_platform.dto.response.UserResponseDto;
 import edu.uth.online_course_platform.exceptions.AppException;
 import edu.uth.online_course_platform.exceptions.ErrorCode;
 import edu.uth.online_course_platform.models.User;
 import edu.uth.online_course_platform.repositories.UserRepository;
+import edu.uth.online_course_platform.services.EnrollmentService;
 import edu.uth.online_course_platform.services.UserService;
 import edu.uth.online_course_platform.until.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +28,8 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private JwtUtils jwtUtils;
+    private final EnrollmentService enrollmentService;
+
 
     @GetMapping
     public ResponseEntity<List<UserResponseDto>> getAllUsers() {
@@ -84,5 +88,12 @@ public class UserController {
     public ResponseEntity<?> changePassword(@PathVariable long id, @RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
         userService.changePassword(id, changePasswordRequest);
         return ResponseEntity.ok("Cập nhật mật khẩu thành công ");
+    }
+
+
+    @GetMapping("/my-enrollments")
+    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> myEnrollments() throws IllegalAccessException{
+        List<EnrollmentResponse> res = enrollmentService.getEnrollmentsForCurrentUser();
+        return ResponseEntity.ok(new ApiResponse<>(200, "My enrollments", res));
     }
 }
