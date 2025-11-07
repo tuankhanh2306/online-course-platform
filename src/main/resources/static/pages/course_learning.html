@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vào học - Course Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    /* ==== CÀI ĐẶT CHUNG ==== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F8F9FA; color: #333; display: flex;
+      min-height: 100vh; margin: 0;
+    }
+    .dashboard-container { display: flex; width: 100%; }
+
+    /* ==== SIDEBAR ==== */
+    .sidebar { width: 240px; background-color: #1D2B4F; color: #A9B4D2; padding: 20px 0; flex-shrink: 0; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 100;}
+    .sidebar-header { padding: 0 20px 20px 20px; text-align: center; border-bottom: 1px solid #2C3A5E; margin-bottom: 20px; }
+    .sidebar-brand { font-size: 1.6rem; font-weight: bold; color: #FFFFFF; text-decoration: none; }
+    .sidebar-nav ul { list-style: none; padding: 0; }
+    .sidebar-nav li a { display: flex; align-items: center; padding: 14px 20px; text-decoration: none; color: #A9B4D2; font-weight: 500; transition: all 0.2s ease; border-left: 4px solid transparent; }
+    .sidebar-nav li a i { width: 20px; margin-right: 15px; font-size: 1.1rem; text-align: center; }
+    .sidebar-nav li.active a { background-color: #0052CC; color: #FFFFFF; border-left-color: #4C9AFF; }
+    .sidebar-nav li a:hover { background-color: #2C3A5E; color: #FFFFFF; }
+    .admin-only, .instructor-only, .student-only, .logged-in-only { display: none; }
+    .logged-out-only { display: block; }
+    #logout-button { cursor: pointer; margin-top: auto; border-top: 1px solid #2C3A5E; }
+
+    /* ==== NỘI DUNG CHÍNH ==== */
+    .main-content { flex-grow: 1; margin-left: 240px; padding: 24px 32px; background-color: #FFFFFF; min-height: 100vh; position: relative; z-index: 1;}
+    .main-header { margin-bottom: 24px; }
+    .course-title-header {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #1D2B4F;
+      margin-bottom: 20px;
+    }
+
+    /* ==== Bố cục trang học ==== */
+    .lesson-container {
+      display: flex;
+      flex-direction: row-reverse; /* Danh sách bài học bên phải */
+      gap: 20px;
+    }
+
+    /* Khung Video/Nội dung chính */
+    .lesson-content-wrapper {
+      flex-grow: 3;
+      width: 75%;
+    }
+    .video-player-wrapper {
+      background-color: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      padding-top: 56.25%; /* Tỷ lệ 16:9 */
+      height: 0;
+      border: 1px solid #E0E0E0;
+    }
+    .video-player-wrapper iframe,
+    .video-player-wrapper .video-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .video-placeholder {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #222;
+      color: #888;
+    }
+    .video-placeholder i { font-size: 3rem; margin-bottom: 15px; }
+
+    /* Danh sách bài học */
+    .lesson-list-wrapper {
+      flex-grow: 1;
+      width: 25%;
+      min-width: 300px;
+      background-color: #F8F9FA;
+      border-radius: 12px;
+      border: 1px solid #E0E0E0;
+      height: 80vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .lesson-list-header {
+      padding: 16px;
+      font-weight: 600;
+      color: #1D2B4F;
+      border-bottom: 1px solid #E0E0E0;
+      position: sticky;
+      top: 0;
+      background-color: #F8F9FA;
+      z-index: 10;
+    }
+    .lesson-list {
+      list-style: none;
+      padding: 0;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .lesson-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #E0E0E0;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .lesson-item:hover {
+      background-color: #EBECF0;
+    }
+    .lesson-item.active {
+      background-color: #E6F0FF;
+      font-weight: 600;
+      color: #0052CC;
+    }
+    .lesson-item i {
+      width: 20px;
+      text-align: center;
+      margin-right: 12px;
+      color: #0052CC;
+    }
+    .lesson-title {
+      flex-grow: 1;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    /* Mô tả bài học (bên dưới video) */
+    .lesson-description-wrapper {
+      margin-top: 20px;
+      padding: 20px;
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E0E0E0;
+    }
+    .lesson-description-wrapper h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #1D2B4F;
+      margin-bottom: 10px;
+    }
+    .lesson-description-wrapper p {
+      line-height: 1.6;
+      color: #42526E;
+    }
+    /* Nút Hoàn thành */
+    #complete-lesson-btn {
+      display: none; /* Ẩn ban đầu */
+      margin-top: 15px;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      background-color: #36B37E; /* Màu xanh lá */
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #complete-lesson-btn:hover:not(:disabled) { background-color: #006644; }
+    #complete-lesson-btn:disabled { background-color: #e0e0e0; color: #777; cursor: default; }
+    #complete-lesson-btn i { margin-right: 8px; }
+
+
+    #loading-indicator { text-align: center; font-size: 1.2em; color: #667085; padding: 40px; }
+    #error-message { text-align: center; font-size: 1.1em; color: #DE350B; padding: 40px; display: none;}
+
+    /* Responsive */
+    @media (max-width: 992px) {
+      .sidebar { width: 70px; } .main-content { margin-left: 70px; }
+      .lesson-container { flex-direction: column; }
+      .lesson-content-wrapper { width: 100%; }
+      .lesson-list-wrapper { width: 100%; max-width: none; height: auto; max-height: 300px; }
+    }
+    @media (max-width: 768px) {
+      body { display: block; }
+      .sidebar { width: 100%; height: auto; position: sticky; top: 0; flex-direction: row; justify-content: space-around; padding: 0 5px; z-index: 101;}
+      .main-content { margin-left: 0; padding: 16px; margin-top: 60px; }
+      .course-title-header { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+  <aside class="sidebar">
+    <div class="sidebar-header"> <a href="index.html" class="sidebar-brand">Courses</a> </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="admin-only" id="menu-dashboard"> <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a> </li>
+        <li class="admin-only" id="menu-users"> <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a> </li>
+        <li class="logged-in-only active" id="menu-my-courses"> <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a> </li>
+        <li id="menu-browse"> <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a> </li>
+        <li class="logged-in-only" id="menu-wishlist"> <a href="#"><i class="fas fa-heart"></i> <span>Wishlist</span></a> </li>
+        <li id="menu-settings"> <a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a> </li>
+        <li class="logged-out-only" id="menu-login"> <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a> </li>
+        <li class="logged-in-only" id="logout-button"> <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a> </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="main-header">
+      <h1 class="course-title-header" id="course-title-header">Đang tải tên khóa học...</h1>
+    </header>
+
+    <section class="content-area">
+      <p id="loading-indicator">Đang tải nội dung khóa học...</p>
+      <p id="error-message"></p>
+
+      <div class="lesson-container" id="lesson-container" style="display: none;">
+        <div class="lesson-content-wrapper">
+          <div class="video-player-wrapper">
+            <div class="video-placeholder" id="video-placeholder">
+              <i class="fas fa-play-circle"></i>
+              <span>Vui lòng chọn một bài học từ danh sách</span>
+            </div>
+            <iframe id="video-iframe"
+                    src=""
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    style="display: none;">
+            </iframe>
+          </div>
+
+          <div class="lesson-description-wrapper" id="lesson-description-wrapper" style="display: none;">
+            <h3 id="lesson-title-display">Chọn một bài học</h3>
+            <p id="lesson-description-display">Mô tả bài học sẽ xuất hiện ở đây.</p>
+
+            <button class="card-button primary" id="complete-lesson-btn" style="display: none; margin-top: 15px;">
+              <i class="fas fa-check-circle"></i> Đánh dấu là đã hoàn thành
+            </button>
+          </div>
+        </div>
+
+        <div class="lesson-list-wrapper">
+          <div class="lesson-list-header">Nội dung khóa học</div>
+          <ul class="lesson-list" id="lesson-list-ul">
+          </ul>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+    const courseTitleHeader = document.getElementById('course-title-header');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const errorMessage = document.getElementById('error-message');
+    const lessonContainer = document.getElementById('lesson-container');
+    const videoPlaceholder = document.getElementById('video-placeholder');
+    const videoIframe = document.getElementById('video-iframe');
+    const lessonListUl = document.getElementById('lesson-list-ul');
+    const lessonDescriptionWrapper = document.getElementById('lesson-description-wrapper');
+    const lessonTitleDisplay = document.getElementById('lesson-title-display');
+    const lessonDescriptionDisplay = document.getElementById('lesson-description-display');
+    const completeLessonBtn = document.getElementById('complete-lesson-btn');
+
+    // --- State ---
+    let currentCourseId = null;
+    let currentLessonId = null;
+    let currentLessons = []; // Lưu trữ danh sách bài học
+
+    // --- Initial Load ---
+    checkLoginStatusAndRedirect();
+    fetchLessonData();
+
+    // --- Event Listeners ---
+    lessonListUl.addEventListener('click', (event) => {
+      const lessonItem = event.target.closest('.lesson-item');
+      if (lessonItem) {
+        const lessonId = lessonItem.dataset.lessonId;
+        selectLesson(lessonId);
+      }
+    });
+
+    completeLessonBtn.addEventListener('click', handleCompleteLesson);
+
+    // --- Functions ---
+
+    function checkLoginStatusAndRedirect() {
+      if (!token) {
+        alert("Vui lòng đăng nhập để vào học.");
+        window.location.href = 'login.html';
+        return;
+      }
+      // (Code checkLoginStatus để hiển thị sidebar giữ nguyên)
+      const loggedInElements = document.querySelectorAll('.logged-in-only');
+      const loggedOutElements = document.querySelectorAll('.logged-out-only');
+      const adminElements = document.querySelectorAll('.admin-only');
+      if (token && userRole) {
+        loggedInElements.forEach(el => el.style.display = 'block');
+        loggedOutElements.forEach(el => el.style.display = 'none');
+        if (userRole === 'ADMIN') adminElements.forEach(el => el.style.display = 'block');
+      } else {
+        loggedInElements.forEach(el => el.style.display = 'none');
+        loggedOutElements.forEach(el => el.style.display = 'block');
+        adminElements.forEach(el => el.style.display = 'none');
+      }
+      const logoutButton = document.getElementById('logout-button');
+      if(logoutButton) logoutButton.addEventListener('click', logout);
+    }
+
+    // --- Lấy Course ID từ URL ---
+    function getCourseIdFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('courseId'); // Lấy ?courseId=...
+    }
+
+    // --- Gọi API lấy danh sách bài học ---
+    async function fetchLessonData() {
+      currentCourseId = getCourseIdFromUrl();
+      if (!currentCourseId) {
+        showError("Lỗi: Không tìm thấy ID khóa học trong URL.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/courses/${currentCourseId}/lessons`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        loadingIndicator.style.display = 'none'; // Ẩn loading
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            showError("Bạn chưa đăng ký khóa học này. Vui lòng đăng ký để vào học.");
+          } else {
+            showError(`Lỗi ${response.status}: Không thể tải nội dung khóa học.`);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (data.result && data.result.length > 0) {
+          currentLessons = data.result; // Lưu lại danh sách
+          displayLessonList(currentLessons);
+          // Lấy tên khóa học từ bài học đầu tiên (giả sử backend trả về)
+          courseTitleHeader.textContent = currentLessons[0].courseTitle || "Nội dung khóa học";
+          // Hiển thị giao diện học
+          lessonContainer.style.display = 'flex';
+          lessonDescriptionWrapper.style.display = 'block';
+        } else {
+          showError("Khóa học này chưa có bài học nào.");
+        }
+
+      } catch (error) {
+        showError("Đã xảy ra lỗi khi kết nối tới máy chủ.");
+        console.error('Error fetching lessons:', error);
+      }
+    }
+
+    // --- Hiển thị danh sách bài học ---
+    function displayLessonList(lessons) {
+      lessonListUl.innerHTML = ''; // Xóa danh sách cũ
+      lessons.forEach(lesson => {
+        const lessonItemHTML = `
+                    <li class="lesson-item" data-lesson-id="${lesson.lessonId}">
+                        <i class="fas fa-play-circle"></i>
+                        <span class="lesson-title">${lesson.orderIndex}. ${lesson.title}</span>
+                    </li>
+                `;
+        lessonListUl.innerHTML += lessonItemHTML;
+      });
+    }
+
+    // --- Xử lý khi nhấp vào một bài học ---
+    function selectLesson(lessonId) {
+      currentLessonId = lessonId; // Lưu ID bài học đang chọn
+
+      // Tìm thông tin bài học từ mảng đã lưu
+      const lesson = currentLessons.find(l => l.lessonId == lessonId);
+      if (!lesson) return;
+
+      // Đánh dấu active cho bài học
+      document.querySelectorAll('.lesson-item').forEach(item => item.classList.remove('active'));
+      document.querySelector(`.lesson-item[data-lesson-id="${lessonId}"]`).classList.add('active');
+
+      // Hiển thị nội dung
+      videoPlaceholder.style.display = 'none';
+      videoIframe.style.display = 'block';
+      videoIframe.src = formatEmbedLink(lesson.driveLink); // Chuyển đổi link GDrive
+
+      // Hiển thị mô tả
+      lessonTitleDisplay.textContent = lesson.title;
+      lessonDescriptionDisplay.textContent = lesson.description || "Bài học này chưa có mô tả.";
+
+      // Hiển thị nút hoàn thành
+      completeLessonBtn.style.display = 'block';
+      completeLessonBtn.disabled = false; // Reset trạng thái nút
+      completeLessonBtn.innerHTML = '<i class="fas fa-check-circle"></i> Đánh dấu là đã hoàn thành';
+    }
+
+    // --- Xử lý nút "Hoàn thành" ---
+    async function handleCompleteLesson() {
+      if (!currentLessonId) {
+        alert("Vui lòng chọn một bài học trước.");
+        return;
+      }
+
+      completeLessonBtn.disabled = true;
+      completeLessonBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/progress/lessons/${currentLessonId}/complete`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          alert("Đã đánh dấu hoàn thành!");
+          completeLessonBtn.innerHTML = '<i class="fas fa-check-double"></i> Đã hoàn thành';
+          // Đổi icon trong danh sách bài học
+          const lessonItem = document.querySelector(`.lesson-item[data-lesson-id="${currentLessonId}"] i`);
+          if (lessonItem) {
+            lessonItem.className = 'fas fa-check-circle'; // Đổi thành icon check
+            lessonItem.style.color = '#36B37E'; // Màu xanh lá
+          }
+        } else {
+          const data = await response.json();
+          alert(`Lỗi: ${data.message || 'Không thể lưu tiến độ.'}`);
+          completeLessonBtn.disabled = false;
+          completeLessonBtn.innerHTML = '<i class="fas fa-check-circle"></i> Đánh dấu là đã hoàn thành';
+        }
+      } catch (error) {
+        console.error('Error completing lesson:', error);
+        alert("Lỗi kết nối. Không thể lưu tiến độ.");
+        completeLessonBtn.disabled = false;
+        completeLessonBtn.innerHTML = '<i class="fas fa-check-circle"></i> Đánh dấu là đã hoàn thành';
+      }
+    }
+
+    // --- Hiển thị lỗi ---
+    function showError(message) {
+      loadingIndicator.style.display = 'none';
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // --- Chuyển đổi link Google Drive ---
+    function formatEmbedLink(url) {
+      if (url && url.includes("drive.google.com/file/d/") && url.includes("/view")) {
+        // Chuyển đổi link 'view' thành 'preview'
+        return url.replace("/view", "/preview");
+      }
+      // (Có thể thêm logic cho Youtube)
+      return url; // Trả về link gốc nếu không khớp
+    }
+
+    // --- Hàm đăng xuất ---
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userFullName');
+      alert('Bạn đã đăng xuất.');
+      window.location.href = 'login.html';
+    }
+  });
+</script>
+
+</body>
+</html>

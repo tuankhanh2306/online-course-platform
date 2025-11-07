@@ -1,14 +1,16 @@
 package edu.uth.online_course_platform.dto.response;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
-@RequiredArgsConstructor
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LoginResponse {
-    private String fullName;
     private String token;
+    private String fullName;
     private String role;
 }

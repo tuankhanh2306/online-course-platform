@@ -3,6 +3,8 @@ package edu.uth.online_course_platform.models;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "feedbacks")
 @Data
@@ -28,4 +30,7 @@ public class Feedback {
 
     @Column(columnDefinition = "TEXT")
     private String comment;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
 }

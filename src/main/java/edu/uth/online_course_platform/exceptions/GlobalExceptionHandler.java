@@ -2,6 +2,7 @@ package edu.uth.online_course_platform.exceptions;
 
 import edu.uth.online_course_platform.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,16 +28,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse> handlingMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        String enumkey = e.getBindingResult().getFieldError().getField();
-        ErrorCode errorCode = ErrorCode.valueOf(enumkey);
-        ApiResponse response = new ApiResponse();
-        response.setCode(errorCode.getCode());
-        response.setMessage(errorCode.getMessage());
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse> handlingMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        String errorMessage = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fieldError -> fieldError.getDefaultMessage()) // dùng message đã định nghĩa trong @NotBlank
+                .findFirst()
+                .orElse("Invalid input");
 
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.badRequest().body(
+                new ApiResponse(
+                        ErrorCode.VALIDATION_ERROR.getCode(),
+                        errorMessage,
+                        null
+                )
+        );
     }
+
 
     @ExceptionHandler(value = IllegalAccessException.class)
     public ResponseEntity<ApiResponse> handlingIllegalAccessException(IllegalAccessException e) {
@@ -53,6 +62,17 @@ public class GlobalExceptionHandler {
         response.setMessage(e.getMessage());
         return ResponseEntity.badRequest().body(response);
     }
+
+    // THÊM TRÌNH XỬ LÝ NÀY
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse> handlingMethodNotSupportedException(HttpRequestMethodNotSupportedException exception) {
+        ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+        // Lấy thông báo chi tiết (ví dụ: "Request method 'GET' is not supported")
+        ApiResponse response = new ApiResponse(errorCode.getCode(), exception.getMessage(), null);
+        return ResponseEntity.status(errorCode.getStatusCode()).body(response);
+    }
+
+
 
 }
 

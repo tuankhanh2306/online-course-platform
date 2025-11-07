@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khóa học của tôi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* ==== CÀI ĐẶT CHUNG ==== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F8F9FA; color: #333; display: flex;
+            min-height: 100vh; margin: 0;
+        }
+        .dashboard-container { display: flex; width: 100%; }
+
+        /* ==== SIDEBAR ==== (Giữ nguyên style) */
+        .sidebar { width: 240px; background-color: #1D2B4F; color: #A9B4D2; padding: 20px 0; flex-shrink: 0; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 100;}
+        .sidebar-header { padding: 0 20px 20px 20px; text-align: center; border-bottom: 1px solid #2C3A5E; margin-bottom: 20px; }
+        .sidebar-brand { font-size: 1.6rem; font-weight: bold; color: #FFFFFF; text-decoration: none; }
+        .sidebar-nav ul { list-style: none; padding: 0; }
+        .sidebar-nav li a { display: flex; align-items: center; padding: 14px 20px; text-decoration: none; color: #A9B4D2; font-weight: 500; transition: all 0.2s ease; border-left: 4px solid transparent; }
+        .sidebar-nav li a i { width: 20px; margin-right: 15px; font-size: 1.1rem; text-align: center; }
+        .sidebar-nav li.active a { background-color: #0052CC; color: #FFFFFF; border-left-color: #4C9AFF; }
+        .sidebar-nav li a:hover { background-color: #2C3A5E; color: #FFFFFF; }
+        .admin-only, .instructor-only, .student-only, .logged-in-only { display: none; }
+        .logged-out-only { display: block; }
+        #logout-button { cursor: pointer; margin-top: auto; border-top: 1px solid #2C3A5E; }
+
+        /* ==== NỘI DUNG CHÍNH ==== */
+        .main-content { flex-grow: 1; margin-left: 240px; padding: 24px 32px; background-color: #FFFFFF; min-height: 100vh; position: relative; z-index: 1;}
+        .main-header { margin-bottom: 24px; position: sticky; top: 0; background-color: #FFFFFF; padding-top: 24px; z-index: 50;}
+        .search-bar { position: relative; width: 100%; }
+        .search-bar input { width: 100%; padding: 14px 20px 14px 45px; border: 1px solid #E0E0E0; border-radius: 8px; font-size: 1rem; background-color: #F8F9FA; }
+        .search-bar input:focus { outline: none; border-color: #0052CC; background-color: #FFFFFF; }
+        .search-bar .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 1rem;}
+        .content-area { margin-top: 20px; }
+        .content-area h2 { font-size: 1.2rem; font-weight: 600; color: #1D2B4F; margin-bottom: 20px; }
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+
+        /* ==== COURSE CARD (MY COURSES) ==== */
+        .course-card { background: #FFFFFF; border-radius: 12px; border: 1px solid #E0E0E0; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; }
+        .card-image-container { position: relative; }
+        .card-image-container img { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .card-body { padding: 16px; flex-grow: 1; }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1D2B4F; }
+        .card-instructor { font-size: 0.9rem; color: #667085; margin-bottom: 15px; }
+        .progress-bar-container { background-color: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 10px; }
+        .progress-bar { background-color: #0052CC; height: 100%; width: 0%; transition: width 0.5s ease; border-radius: 4px; }
+        .card-footer-action { padding: 16px; margin-top: auto; border-top: 1px solid #F0F2F5; text-align: center; }
+        /* Style cho các nút trong card-footer */
+        .action-button { background-color: #0052CC; color: white; border: none; border-radius: 6px; padding: 10px 20px; font-weight: 500; cursor: pointer; transition: background-color 0.2s; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+        .action-button:hover { background-color: #003C9A; }
+        .action-button.pending { background-color: #FFAB00; color: #172B4D; }
+        .action-button.pending:hover { background-color: #FF8B00; }
+        .action-button.failed { background-color: #DE350B; color: #FFFFFF; }
+        .action-button.failed:hover { background-color: #BF2600; }
+        .action-button i { margin-right: 8px; }
+
+        #loading-indicator { text-align: center; font-size: 1.2em; color: #667085; padding: 40px; }
+        #no-courses-message { text-align: center; font-size: 1.1em; color: #667085; padding: 40px; }
+
+        /* ==== PAYMENT MODAL (Copy từ index.html) ==== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background-color: #FFFFFF; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal-close-button { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: #888; cursor: pointer; line-height: 1; }
+        .modal-title { font-size: 1.8rem; font-weight: 600; color: #1D2B4F; margin-bottom: 10px; }
+        .payment-section { margin-top: 20px; padding: 20px; background-color: #F8F9FA; border-radius: 8px; }
+        .payment-section h3 { font-size: 1.2rem; color: #1D2B4F; margin-bottom: 15px; }
+        .course-info { background-color: #FFFFFF; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #E0E0E0; }
+        .course-info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem; }
+        .course-info-row:last-child { margin-bottom: 0; padding-top: 10px; border-top: 2px solid #E0E0E0; font-weight: 600; font-size: 1.1rem; }
+        .payment-methods { margin-bottom: 20px; }
+        .payment-method { display: flex; align-items: center; padding: 12px; background-color: #FFFFFF; border: 2px solid #E0E0E0; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .payment-method:hover { border-color: #0052CC; }
+        .payment-method.selected { border-color: #0052CC; background-color: #E6F0FF; }
+        .payment-method input[type="radio"] { margin-right: 12px; width: 18px; height: 18px; cursor: pointer; }
+        .payment-method-icon { font-size: 1.5rem; margin-right: 12px; width: 30px; text-align: center; }
+        .payment-method-info { flex-grow: 1; }
+        .payment-method-name { font-weight: 600; color: #1D2B4F; }
+        .payment-method-desc { font-size: 0.85rem; color: #667085; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-button { flex: 1; padding: 12px 20px; border-radius: 8px; border: none; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+        .modal-button.primary { background-color: #0052CC; color: #FFFFFF; }
+        .modal-button.primary:hover:not(:disabled) { background-color: #003C9A; }
+        .modal-button.secondary { background-color: #FFFFFF; color: #667085; border: 1px solid #C1C7D0; }
+        .modal-button.secondary:hover:not(:disabled) { background-color: #F8F9FA; border-color: #B3BAC5; }
+        .modal-button.danger { background-color: #DE350B; color: #FFFFFF; }
+        .modal-button.danger:hover:not(:disabled) { background-color: #BF2600; }
+        .modal-button:disabled { background-color: #E0E0E0; color: #999; cursor: not-allowed; border-color: #E0E0E0; }
+        #payment-modal-loading { display: none; text-align: center; margin-top: 15px; color: #667085; }
+        #payment-modal-error { display: none; text-align: center; margin-top: 15px; color: #DE350B; font-weight: 500;}
+
+        /* Responsive */
+        @media (max-width: 992px) { /* (Giữ nguyên) */ }
+        @media (max-width: 768px) { /* (Giữ nguyên) */ }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header"> <a href="index.html" class="sidebar-brand">Courses</a> </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="admin-only" id="menu-dashboard"> <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a> </li>
+                <li class="admin-only" id="menu-users"> <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a> </li>
+                <li class="logged-in-only active" id="menu-my-courses"> <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a> </li>
+                <li id="menu-browse"> <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a> </li>
+                <li class="logged-in-only" id="menu-wishlist"> <a href="#"><i class="fas fa-heart"></i> <span>Wishlist</span></a> </li>
+                <li id="menu-settings"> <a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a> </li>
+                <li class="logged-out-only" id="menu-login"> <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a> </li>
+                <li class="logged-in-only" id="logout-button"> <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a> </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="main-header">
+            <div class="search-bar">
+                <span class="search-icon"><i class="fas fa-search"></i></span>
+                <input type="text" id="search-input" placeholder="Tìm kiếm trong khóa học của bạn...">
+            </div>
+        </header>
+
+        <section class="content-area">
+            <h2 id="content-title">Khóa học của tôi</h2>
+            <div class="course-grid" id="my-course-grid-container">
+                <p id="loading-indicator">Đang tải khóa học của bạn...</p>
+                <p id="no-courses-message" style="display: none;">Bạn chưa đăng ký khóa học nào.</p>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal-overlay" id="payment-modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close-button" id="payment-modal-close-btn">&times;</button>
+        <div id="payment-modal-body">
+            <h2 class="modal-title">Xác nhận thanh toán</h2>
+            <div class="payment-section">
+                <h3>Thông tin khóa học</h3>
+                <div class="course-info">
+                    <div class="course-info-row"> <span>Tên khóa học:</span> <span id="payment-course-title">...</span> </div>
+                    <div class="course-info-row"> <span>Giảng viên:</span> <span id="payment-course-instructor">...</span> </div>
+                    <div class="course-info-row"> <span>Tổng tiền:</span> <span id="payment-course-price" style="font-weight: bold; color: #0052CC;">...</span> </div>
+                </div>
+                <h3>Phương thức thanh toán</h3>
+                <div class="payment-methods">
+                    <label class="payment-method selected">
+                        <input type="radio" name="payment-method" value="momo" checked>
+                        <span class="payment-method-icon" style="color: #A50064;"><i class="fas fa-wallet"></i></span>
+                        <div class="payment-method-info">
+                            <div class="payment-method-name">Ví MoMo</div>
+                            <div class="payment-method-desc">Thanh toán qua ví điện tử MoMo</div>
+                        </div>
+                    </label>
+                    <label class="payment-method">
+                        <input type="radio" name="payment-method" value="bank">
+                        <span class="payment-method-icon" style="color: #0052CC;"><i class="fas fa-university"></i></span>
+                        <div class="payment-method-info">
+                            <div class="payment-method-name">Chuyển khoản ngân hàng</div>
+                            <div class="payment-method-desc">Chuyển khoản trực tiếp</div>
+                        </div>
+                    </label>
+                    <label class="payment-method">
+                        <input type="radio" name="payment-method" value="visa">
+                        <span class="payment-method-icon" style="color: #1A1F71;"><i class="fas fa-credit-card"></i></span>
+                        <div class="payment-method-info">
+                            <div class="payment-method-name">Thẻ Visa/Mastercard</div>
+                            <div class="payment-method-desc">Thanh toán bằng thẻ quốc tế</div>
+                        </div>
+                    </label>
+                </div>
+                <p id="payment-modal-error"></p>
+                <p id="payment-modal-loading"><i class="fas fa-spinner fa-spin"></i> Đang xử lý...</p>
+                <div class="modal-actions">
+                    <button class="modal-button danger" id="payment-cancel-btn"> <i class="fas fa-times"></i> Hủy </button>
+                    <button class="modal-button secondary" id="payment-later-btn"> <i class="fas fa-clock"></i> Thanh toán sau </button>
+                    <button class="modal-button primary" id="payment-confirm-btn"> <i class="fas fa-check"></i> Xác nhận </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const token = localStorage.getItem('token');
+        const userRole = localStorage.getItem('userRole');
+        const userFullName = localStorage.getItem('userFullName');
+        const myCourseGrid = document.getElementById('my-course-grid-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const noCoursesMessage = document.getElementById('no-courses-message');
+
+        // Payment Modal Elements
+        const paymentModalOverlay = document.getElementById('payment-modal-overlay');
+        const paymentModalCloseBtn = document.getElementById('payment-modal-close-btn');
+        const paymentCancelBtn = document.getElementById('payment-cancel-btn');
+        const paymentLaterBtn = document.getElementById('payment-later-btn');
+        const paymentConfirmBtn = document.getElementById('payment-confirm-btn');
+        const paymentLoading = document.getElementById('payment-modal-loading');
+        const paymentError = document.getElementById('payment-modal-error');
+
+        // --- State ---
+        let currentModalCourseId = null;
+        let currentModalEnrollmentId = null;
+        let allMyEnrollments = []; // Lưu trữ toàn bộ data
+
+        // --- Initial Load ---
+        checkLoginStatusAndRedirect();
+        fetchMyCourses();
+
+        // --- Event Handlers ---
+        myCourseGrid.addEventListener('click', (event) => {
+            const targetButton = event.target.closest('button.action-button'); // Chỉ bắt sự kiện trên nút action
+            if (targetButton) {
+                event.preventDefault(); // Ngăn thẻ <a> điều hướng ngay
+                const courseId = targetButton.dataset.courseId;
+                const enrollmentId = targetButton.dataset.enrollmentId;
+
+                if (targetButton.classList.contains('pending-payment-btn') || targetButton.classList.contains('failed-payment-btn')) {
+                    showPaymentModal(courseId, enrollmentId);
+                } else if (targetButton.classList.contains('learn-button-success')) {
+                    // Chỉ nút "Vào học" mới điều hướng
+                    window.location.href = `course_learning.html?courseId=${courseId}`;
+                }
+            } else {
+                // Cho phép click vào phần còn lại của thẻ (nếu là thẻ <a>)
+                const cardLink = event.target.closest('a.course-card');
+                if (cardLink && !cardLink.querySelector('.pending-payment-btn') && !cardLink.querySelector('.failed-payment-btn')) {
+                    // Chỉ điều hướng nếu thẻ không chứa nút chờ thanh toán
+                } else if (cardLink) {
+                    event.preventDefault(); // Ngăn điều hướng nếu là thẻ PENDING/FAILED
+                    alert("Vui lòng hoàn tất thanh toán để vào học.");
+                }
+            }
+        });
+
+        // Payment Modal Handlers (Copy từ index.html)
+        paymentModalCloseBtn.addEventListener('click', closePaymentModal);
+        paymentLaterBtn.addEventListener('click', closePaymentModal);
+        paymentConfirmBtn.addEventListener('click', handleConfirmPayment);
+        paymentCancelBtn.addEventListener('click', handleCancelPayment);
+        paymentModalOverlay.addEventListener('click', (event) => { if (event.target === paymentModalOverlay) closePaymentModal(); });
+
+        // Payment method selection (Copy từ index.html)
+        document.querySelectorAll('.payment-method').forEach(method => {
+            method.addEventListener('click', function() {
+                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input[type="radio"]').checked = true;
+            });
+        });
+
+        // --- Functions ---
+        function checkLoginStatusAndRedirect() { /* (Giữ nguyên như file bạn đã gửi) */ }
+
+        async function fetchMyCourses() {
+            loadingIndicator.style.display = 'block';
+            noCoursesMessage.style.display = 'none';
+            myCourseGrid.innerHTML = '';
+            try {
+                const response = await fetch('http://localhost:8080/api/users/my-enrollments', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                loadingIndicator.style.display = 'none';
+                if (!response.ok) {
+                    console.error('Failed to fetch my courses:', response.status);
+                    myCourseGrid.innerHTML = '<p>Không thể tải khóa học của bạn.</p>'; return;
+                }
+                const data = await response.json();
+                if (data.result && data.result.length > 0) {
+                    allMyEnrollments = data.result; // Lưu lại dữ liệu
+                    displayMyCourses(allMyEnrollments);
+                } else {
+                    noCoursesMessage.style.display = 'block';
+                }
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                console.error('Error fetching my courses:', error);
+                myCourseGrid.innerHTML = '<p>Đã xảy ra lỗi khi kết nối tới máy chủ.</p>';
+            }
+        }
+
+        // --- CẬP NHẬT: displayMyCourses ---
+        function displayMyCourses(enrollments) {
+            myCourseGrid.innerHTML = '';
+            if (!enrollments || enrollments.length === 0) {
+                noCoursesMessage.style.display = 'block'; return;
+            }
+
+            enrollments.forEach(enrollment => {
+                const courseId = enrollment.courseId;
+                const title = enrollment.courseTitle || enrollment.courseName || 'Không có tiêu đề';
+                const instructorName = enrollment.instructorName || 'Không rõ giảng viên';
+                const imageUrl = enrollment.imageUrl || `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=Course`;
+                const progress = enrollment.progress !== null && enrollment.progress !== undefined ? enrollment.progress : 0;
+                const paymentStatus = enrollment.paymentStatus || 'UNKNOWN';
+                const enrollmentId = enrollment.enrollmentId;
+
+                let actionButtonHTML = '';
+                let cardTag = 'div'; // Mặc định là div
+                let cardHref = ''; // Mặc định không có link
+
+                if (paymentStatus === 'COMPLETED') {
+                    // Đã thanh toán: Thẻ là 1 link, nút là "Vào học"
+                    cardTag = 'a';
+                    cardHref = `href="course_learning.html?courseId=${courseId}"`;
+                    actionButtonHTML = `<button class="action-button learn-button-success" data-course-id="${courseId}">
+                                            <i class="fas fa-play-circle"></i> Vào học
+                                        </button>`;
+                } else if (paymentStatus === 'PENDING') {
+                    // Chờ thanh toán: Thẻ không phải link, nút là "Hoàn tất thanh toán"
+                    actionButtonHTML = `<button class="action-button pending pending-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
+                                            <i class="fas fa-credit-card"></i> Hoàn tất thanh toán
+                                        </button>`;
+                } else if (paymentStatus === 'FAILED') {
+                    // Thanh toán lỗi: Thẻ không phải link, nút là "Thanh toán lại"
+                    actionButtonHTML = `<button class="action-button failed failed-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
+                                            <i class="fas fa-redo"></i> Thanh toán lại
+                                        </button>`;
+                } else {
+                    // Trạng thái không xác định: Coi như PENDING
+                    actionButtonHTML = `<button class="action-button pending pending-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
+                                            <i class="fas fa-clock"></i> Chờ thanh toán
+                                        </button>`;
+                }
+
+                const courseCardHTML = `
+                    <${cardTag} ${cardHref} class="course-card">
+                        <div class="card-image-container">
+                            <img src="${imageUrl}" alt="${title}">
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title" title="${title}">${title}</h3>
+                            <p class="card-instructor">Giảng viên: ${instructorName}</p>
+                            <div class="progress-bar-container" title="Tiến độ: ${progress.toFixed(0)}%">
+                                <div class="progress-bar" style="width: ${progress}%;"></div>
+                            </div>
+                        </div>
+                        <div class="card-footer-action">
+                            ${actionButtonHTML}
+                        </div>
+                    </${cardTag}>
+                `;
+                myCourseGrid.innerHTML += courseCardHTML;
+            });
+        }
+
+        // --- CÁC HÀM CỦA MODAL THANH TOÁN (Copy từ index.html) ---
+
+        async function showPaymentModal(courseId, enrollmentId) {
+            console.log(`Showing payment modal for course ${courseId}, enrollment ${enrollmentId}`);
+            currentModalCourseId = parseInt(courseId);
+            currentModalEnrollmentId = parseInt(enrollmentId);
+
+            paymentLoading.style.display = 'none';
+            paymentError.style.display = 'none';
+            paymentConfirmBtn.disabled = false;
+            paymentCancelBtn.disabled = false;
+            paymentLaterBtn.disabled = false;
+            // Reset payment method
+            const defaultMethod = document.querySelector('.payment-method input[value="momo"]');
+            if(defaultMethod) defaultMethod.checked = true;
+            document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+            if(defaultMethod) defaultMethod.closest('.payment-method').classList.add('selected');
+
+            paymentModalOverlay.style.display = 'flex';
+
+            // Lấy thông tin khóa học từ mảng đã lưu
+            const enrollment = allMyEnrollments.find(e => e.enrollmentId == enrollmentId);
+            if (enrollment) {
+                document.getElementById('payment-course-title').textContent = enrollment.courseName || 'N/A';
+                document.getElementById('payment-course-instructor').textContent = enrollment.instructorName || 'N/A';
+                // Cần fetch giá từ API public/courses nếu API /my-enrollments không trả về giá
+                document.getElementById('payment-course-price').textContent = "Đang tải giá..."; // Tạm
+                fetchCoursePrice(courseId); // Gọi hàm riêng để lấy giá
+            } else {
+                paymentError.textContent = 'Lỗi tải thông tin khóa học.';
+                paymentError.style.display = 'block';
+            }
+        }
+
+        async function fetchCoursePrice(courseId) {
+            try {
+                const response = await fetch(`http://localhost:8080/api/public/courses/${courseId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.result) {
+                        document.getElementById('payment-course-price').textContent = formatPrice(data.result.price);
+                    } else { document.getElementById('payment-course-price').textContent = "N/A"; }
+                }
+            } catch (e) { document.getElementById('payment-course-price').textContent = "Lỗi"; }
+        }
+
+        function closePaymentModal() {
+            paymentModalOverlay.style.display = 'none';
+            currentModalCourseId = null;
+            currentModalEnrollmentId = null;
+            // Không cần updateCardButtonState vì fetchMyCourses sẽ được gọi lại
+        }
+
+        async function handleConfirmPayment() {
+            const enrollmentId = currentModalEnrollmentId;
+            const courseId = currentModalCourseId;
+            if (enrollmentId === null || courseId === null) return;
+            const selectedMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'N/A';
+
+            paymentLoading.style.display = 'block'; paymentError.style.display = 'none';
+            paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/payments/simulate-success/${enrollmentId}`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`Payment failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
+                }
+
+                console.log('Payment simulation successful.');
+                alert(`Thanh toán thành công qua ${getPaymentMethodName(selectedMethod)}!`);
+                closePaymentModal();
+                fetchMyCourses(); // Tải lại danh sách khóa học
+
+            } catch (error) {
+                console.error('Error confirming payment:', error);
+                paymentLoading.style.display = 'none';
+                paymentError.textContent = `Lỗi thanh toán: ${error.message}`;
+                paymentError.style.display = 'block';
+                paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
+                // Cần cập nhật trạng thái FAILED nếu có
+                fetchMyCourses(); // Tải lại để cập nhật trạng thái FAILED
+            }
+        }
+
+        async function handleCancelPayment() {
+            const enrollmentId = currentModalEnrollmentId;
+            if (enrollmentId === null) return;
+
+            if (!confirm("Bạn có chắc chắn muốn hủy lượt đăng ký này không?")) return;
+
+            paymentLoading.style.display = 'block'; paymentError.style.display = 'none';
+            paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/enrollments/${enrollmentId}`, {
+                    method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(`Cancel failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
+                }
+                console.log("Enrollment cancelled on backend.");
+
+                alert("Đã hủy lượt đăng ký.");
+                closePaymentModal();
+                fetchMyCourses(); // Tải lại danh sách khóa học
+
+            } catch (error) {
+                console.error('Error cancelling enrollment:', error);
+                paymentLoading.style.display = 'none';
+                paymentError.textContent = `Lỗi hủy đăng ký: ${error.message}`;
+                paymentError.style.display = 'block';
+                paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
+            }
+        }
+
+        function getPaymentMethodName(method) {
+            const names = { 'momo': 'Ví MoMo', 'bank': 'Chuyển khoản ngân hàng', 'visa': 'Thẻ Visa/Mastercard' };
+            return names[method] || method;
+        }
+
+        function formatPrice(price) {
+            if (price === null || price === undefined) return 'N/A';
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        function getRandomColor() { /* (Giữ nguyên) */ }
+
+        function logout() { /* (Giữ nguyên) */ }
+
+    });
+</script>
+
+</body>
+</html>

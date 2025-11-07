@@ -1,6 +1,7 @@
 package edu.uth.online_course_platform.dto.response;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @AllArgsConstructor
+@Builder
 public class CourseResponse {
 
     private Long courseId;
@@ -21,4 +23,5 @@ public class CourseResponse {
 
     private BigDecimal price;
 
+    private String imageUrl;
 }

@@ -1,53 +1,56 @@
 package edu.uth.online_course_platform.exceptions;
 
+import org.springframework.http.HttpStatus;
+
+/**
+ * Enum quản lý tập trung các mã lỗi trong ứng dụng.
+ * Mỗi mã lỗi bao gồm:
+ * - code: Mã lỗi nội bộ (dùng cho client)
+ * - message: Thông báo lỗi chi tiết (trả về cho người dùng)
+ * - statusCode: Mã trạng thái HTTP (dùng cho ResponseEntity)
+ */
 public enum ErrorCode {
-    UNCATEGORIZED_EXCEPTION(999, "Uncategorized Exception"),
-    USER_EXISTED(1001, "User đã tồn tại!"),
-    USERNAME_INVALID(1003,"Họ tên không được để trống"),
-    EMAIL_INVALID(1004,"Email Đã tồn tại"),
-    USERNAME_NOT_EXISTED(1005,"User không tồn tại"),
-    PASSWORD_INVALID(1007,"Lỗi mật khẩu"),
-    USER_NOT_FOUND(1008, "Không tìm thấy người dùng"),
 
-    // Chuyên viên
-    SPECIALIST_NOT_FOUND(1101,"Không tìm thấy chuyên viên"),
-    SPECIALIST_EXISTED(1102, "Chuyên viên đã tồn tại"),
-    SPECIALIST_INVALID(1103, "Thông tin chuyên viên không hợp lệ"),
+    // --- 1. Lỗi chung (Generic Errors) ---
+    UNCATEGORIZED_EXCEPTION(999, "Lỗi hệ thống không xác định", HttpStatus.INTERNAL_SERVER_ERROR),
+    VALIDATION_ERROR(1000, "Dữ liệu đầu vào không hợp lệ", HttpStatus.BAD_REQUEST),
+    METHOD_NOT_ALLOWED(1001, "Phương thức HTTP không được hỗ trợ", HttpStatus.METHOD_NOT_ALLOWED),
+    RESOURCE_NOT_FOUND(1002, "Không tìm thấy tài nguyên được yêu cầu", HttpStatus.NOT_FOUND),
 
-    // Dịch vụ
-    SERVICE_NOT_FOUND(1201, "Không tìm thấy dịch vụ"),
-    SERVICE_EXISTED(1202, "Dịch vụ đã tồn tại"),
-    SERVICE_INVALID(1203, "Thông tin dịch vụ không hợp lệ"),
+    // --- 2. Lỗi Xác thực & Phân quyền (Auth Errors) ---
+    USER_EXISTED(1101, "Địa chỉ email này đã được sử dụng", HttpStatus.BAD_REQUEST),
+    USER_NOT_FOUND(1102, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
+    INVALID_CREDENTIALS(1103, "Email hoặc mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
+    PASSWORD_CONFIRM_NOT_MATCH(1104, "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
+    EMAIL_INVALID(1105,"Lỗi Email", HttpStatus.BAD_REQUEST),
+    // 403 Forbidden (Đã xác thực nhưng không có quyền)
+    UNAUTHORIZED(1201, "Bạn không có quyền thực hiện hành động này", HttpStatus.FORBIDDEN),
 
-    // Đặt lịch hẹn
-    APPOINTMENT_NOT_FOUND(1301, "Không tìm thấy lịch hẹn"),
-    APPOINTMENT_CONFLICT(1302, "Khung giờ đã được đặt, vui lòng chọn giờ khác"),
-    APPOINTMENT_INVALID(1303, "Thông tin đặt lịch không hợp lệ"),
-    APPOINTMENT_ALREADY_COMPLETED(1304, "Lịch hẹn đã hoàn tất, không thể thay đổi"),
+    // 401 Unauthorized (Chưa xác thực)
+    JWT_TOKEN_MISSING(1202, "Yêu cầu thiếu token xác thực", HttpStatus.UNAUTHORIZED),
+    JWT_TOKEN_INVALID(1203, "Token xác thực không hợp lệ hoặc đã bị thay đổi", HttpStatus.UNAUTHORIZED),
+    JWT_TOKEN_EXPIRED(1204, "Token xác thực đã hết hạn", HttpStatus.UNAUTHORIZED),
 
-    // Phản hồi
-    FEEDBACK_NOT_FOUND(1401, "Không tìm thấy phản hồi"),
-    FEEDBACK_INVALID(1402, "Nội dung phản hồi không hợp lệ"),
+    // --- 3. Lỗi Nghiệp vụ (Business Logic Errors) ---
+    COURSE_NOT_FOUND(1301, "Không tìm thấy khóa học", HttpStatus.NOT_FOUND),
+    LESSON_NOT_FOUND(1302, "Không tìm thấy bài học", HttpStatus.NOT_FOUND),
+    ENROLLMENT_EXISTED(1303, "Bạn đã đăng ký khóa học này rồi", HttpStatus.CONFLICT), // 409 Conflict
+    NOT_ENROLLED(1304, "Bạn chưa đăng ký khóa học này", HttpStatus.FORBIDDEN),
+    FEEDBACK_EXISTED(1305, "Bạn đã đánh giá khóa học này rồi", HttpStatus.CONFLICT),
 
     // Thanh toán
-    PAYMENT_FAILED(1501, "Thanh toán thất bại"),
-    PAYMENT_METHOD_INVALID(1502, "Phương thức thanh toán không hợp lệ"),
-
-    // Token & xác thực
-    JWT_TOKEN_EXPIRED(1601, "Token đã hết hạn"),
-    JWT_TOKEN_INVALID(1602, "Token không hợp lệ"),
-    JWT_TOKEN_MISSING(1603, "Thiếu token xác thực"),
-    INVALID_CREDENTIALS(1604, "Mat khẩu hoặc email đăng nhập không đúng"),
-
-    PASSWORD_CONFIRM_NOT_MATCH(1701,"Mật khẩu xác thực không đúng")
-    ;
+    PAYMENT_FAILED(1401, "Quá trình thanh toán thất bại", HttpStatus.BAD_REQUEST),
+    PAYMENT_METHOD_INVALID(1402, "Phương thức thanh toán không hợp lệ", HttpStatus.BAD_REQUEST);
 
 
-    private int code;
-    private String message;
-    ErrorCode(int code, String message) {
+    private final int code;
+    private final String message;
+    private final HttpStatus statusCode;
+
+    ErrorCode(int code, String message, HttpStatus statusCode) {
         this.code = code;
         this.message = message;
+        this.statusCode = statusCode;
     }
 
     public int getCode() {
@@ -56,5 +59,9 @@ public enum ErrorCode {
 
     public String getMessage() {
         return message;
+    }
+
+    public HttpStatus getStatusCode() {
+        return statusCode;
     }
 }

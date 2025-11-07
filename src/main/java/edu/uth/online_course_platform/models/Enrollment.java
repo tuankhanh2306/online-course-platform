@@ -1,4 +1,5 @@
 package edu.uth.online_course_platform.models;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -29,10 +30,12 @@ public class Enrollment {
 
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @JsonBackReference("student-enrollments")
     private User student;
 
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @JsonBackReference("course-enrollments")
     private Course course;
 
     @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

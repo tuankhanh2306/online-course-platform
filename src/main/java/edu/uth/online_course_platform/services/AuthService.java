@@ -12,60 +12,75 @@ import edu.uth.online_course_platform.until.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor // Tự động inject các dependency được khai báo final
 public class AuthService {
-    private final PasswordEncoder passwordEncoder;
-    private final UserRepository userRepository;
+
     private final AuthenticationManager authenticationManager;
-    private final CustomUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
-    public RegisterResponse register(RegisterRequest registerRequest)
-    {
-        User user = new User();
-        if (userRepository.existsByEmail(registerRequest.getEmail()))
+    /**
+     * Xử lý logic đăng ký người dùng mới.
+     */
+    public RegisterResponse register(RegisterRequest request) {
+        // 1. Kiểm tra xem email đã tồn tại chưa
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.USER_EXISTED);
-        user.setEmail(registerRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setFullName(registerRequest.getFullName());
-        user.setPhoneNumber(registerRequest.getPhoneNumber());
-        user.setRole(User.UserRole.STUDENT);
+        }
+
+        // 2. Xử lý vai trò (role) một cách an toàn
+        User.UserRole role = request.getRole();
+        // Không cho phép người dùng tự đăng ký làm ADMIN
+        if (role == null || role == User.UserRole.ADMIN) {
+            role = User.UserRole.STUDENT; // Mặc định là STUDENT
+        }
+
+        // 3. Tạo đối tượng User mới
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(role)
+                .build();
+
+        // 4. Lưu vào cơ sở dữ liệu
         userRepository.save(user);
-        return new RegisterResponse(
-                user.getFullName(),
-                user.getEmail()
+
+        // 5. Trả về response theo DTO của dự án
+        return new RegisterResponse(user.getFullName(), user.getEmail());
+    }
+
+    /**
+     * Xử lý logic đăng nhập.
+     */
+    public LoginResponse login(LoginRequest request) {
+        // 1. Xác thực người dùng bằng AuthenticationManager
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
         );
-    }
 
-    public LoginResponse login(LoginRequest loginRequest) {
-        /* If user was found, hand to authenticate with these steps below:
-        1. Generate a auth token as an authentication application inside UsernamePasswordAuthenticationToken. If it's successfull, it will create an authentication Object (but not authenticated yet) just for username, password and user's authority
-        2. Then the authentication will be passed to authenticate Method of authenticationManager. Until now, username and password from login are authenticated
-        3. If authentication failed, authenticationManager will terminate and release exception to failed login
-        4. If authenticate successfully, the authentication will be passed into SecurityContextHolder. Until then, any services or logics can get user's authentication from securityContext -> this is the primary benefit of using token that user donnot need anymore login whenever changing service.
-        5. However, to do that, we need to create Jwt token after  the first authentication at login.
-         */
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword());
-        var authentication = authenticationManager.authenticate(authToken);
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-        String token = jwtUtils.generateToken((UserDetails) authentication.getPrincipal());
+        // 2. Lấy thông tin người dùng đã được xác thực từ Principal
+        User userPrincipal = (User) authentication.getPrincipal();
 
-        LoginResponse loginResponse = new LoginResponse();
-        loginResponse.setToken(token);
-        loginResponse.setFullName(((UserDetails) authentication.getPrincipal()).getUsername());
-        loginResponse.setRole(authentication.getAuthorities().iterator().next().getAuthority());
-        return loginResponse;
-    }
+        // 3. Tạo JWT token
+        String token = jwtUtils.generateToken( userPrincipal);
 
-    public String logout() {
-        SecurityContextHolder.clearContext();
-        return "Logged out";
+        // 4. Trả về response theo DTO của dự án (gồm token, fullName và role)
+        return LoginResponse.builder()
+                .token(token)
+                .fullName(userPrincipal.getFullName())
+                .role(userPrincipal.getRole().name())
+                .build();
     }
 }

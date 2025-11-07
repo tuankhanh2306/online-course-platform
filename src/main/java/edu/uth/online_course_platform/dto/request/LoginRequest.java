@@ -2,18 +2,15 @@ package edu.uth.online_course_platform.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@RequiredArgsConstructor
+@Data
 public class LoginRequest {
-    @NotBlank(message = "Your email cannot be blank")
-    @Email(message = "Your Email is invalid")
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
     private String email;
 
-    @NotBlank(message = "Your password cannot be blank")
+    @NotBlank(message = "Password is required")
     private String password;
 }

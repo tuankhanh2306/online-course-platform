@@ -36,12 +36,5 @@ public class AuthController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@Valid @RequestBody LoginRequest loginRequest) {
-        ApiResponse<String> apiResponse = new ApiResponse<>();
-        apiResponse.setMessage("success");
-        apiResponse.setCode(200);
-        apiResponse.setResult(authService.logout());
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
+
 }

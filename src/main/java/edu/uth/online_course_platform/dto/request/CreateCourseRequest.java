@@ -34,4 +34,5 @@ public class CreateCourseRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
 
+    private String imageUrl;
 }

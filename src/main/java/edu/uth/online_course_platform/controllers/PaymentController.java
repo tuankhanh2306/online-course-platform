@@ -6,10 +6,7 @@ import edu.uth.online_course_platform.services.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,4 +20,5 @@ public class PaymentController {
         PaymentResponse res = paymentService.simulatePaymentSuccess(enrollmentId);
         return ResponseEntity.ok(new ApiResponse<>(200, "Payment simulated success", res));
     }
+
 }

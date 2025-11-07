@@ -1,21 +1,18 @@
 package edu.uth.online_course_platform.models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.*;
 
-import java.time.LocalDateTime;
-
+@Entity
+@Table(name = "lessons")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
 @Builder
-@Table(name = "lessons")
 public class Lesson {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(columnDefinition = "BIGINT UNSIGNED")
@@ -23,17 +20,24 @@ public class Lesson {
 
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @JsonBackReference
     private Course course;
 
-    @Column(nullable = false, length = 200)
-    private String title;
+    @Column(nullable = false, length = 255)
+    private String title; // Tên bài học
 
     @Column(columnDefinition = "TEXT")
-    private String description;
+    private String description; // Mô tả ngắn
 
-    @Column(nullable = false, length = 500)
-    private String driveLink;
+    @Column(name = "drive_link", nullable = false, length = 500)
+    private String driveLink; // Đường dẫn file/video
 
-    @Column(nullable = false)
-    private int orderIndex = 0;
+
+    @Column(name = "order_index") // Tên cột trong DB
+    private int orderIndex; // Thứ tự trong khóa học
+
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+
 }

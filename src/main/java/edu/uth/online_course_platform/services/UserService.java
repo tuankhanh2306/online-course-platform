@@ -81,6 +81,7 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         user.setFullName(userCreateDto.getFullName());
+        user.setPhoneNumber(userCreateDto.getPhoneNumber());
         user.setEmail(userCreateDto.getEmail());
         user.setRole(userCreateDto.getRole());
 
@@ -102,7 +103,7 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new AppException(ErrorCode.PASSWORD_INVALID);
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

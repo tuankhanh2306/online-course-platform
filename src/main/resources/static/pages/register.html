@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng ký - Course Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(0, 170, 255, 0.2) 0%, transparent 50%),
+            radial-gradient(circle at 70% 80%, rgba(0, 230, 255, 0.15) 0%, transparent 50%);
+            animation: wave 15s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(5%, -5%) rotate(2deg); }
+            50% { transform: translate(-5%, 5%) rotate(-2deg); }
+            75% { transform: translate(5%, 5%) rotate(1deg); }
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: rise 10s infinite ease-in;
+        }
+
+        .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-delay: 0s; }
+        .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-delay: 2s; animation-duration: 12s; }
+        .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-delay: 4s; }
+        .bubble:nth-child(4) { width: 30px; height: 30px; left: 50%; animation-delay: 0s; animation-duration: 14s; }
+        .bubble:nth-child(5) { width: 25px; height: 25px; left: 70%; animation-delay: 3s; }
+        .bubble:nth-child(6) { width: 35px; height: 35px; left: 85%; animation-delay: 1s; animation-duration: 11s; }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(100px);
+            }
+            100% {
+                bottom: 110vh;
+                transform: translateX(-50px);
+            }
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            z-index: 10;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .style-ne {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 40px 35px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .register h1 {
+            font-size: 38px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .register p {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        input[type="tel"] {
+            border-radius: 12px;
+            padding: 14px 18px;
+            width: 100%;
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            color: #1e293b;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #0ea5e9;
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+            transform: translateY(-2px);
+        }
+
+        input::placeholder {
+            color: #94a3b8;
+        }
+
+        button[type="submit"] {
+            border-radius: 12px;
+            padding: 14px;
+            width: 100%;
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .form-link span {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .form-link a {
+            color: #0ea5e9;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-weight: 600;
+        }
+
+        .form-link a:hover {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        #error-message,
+        #success-message {
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+            animation: shake 0.5s;
+        }
+
+        #error-message {
+            color: #dc2626;
+            background-color: #fee2e2;
+            border: 2px solid #fecaca;
+        }
+
+        #success-message {
+            color: #059669;
+            background-color: #d1fae5;
+            border: 2px solid #a7f3d0;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .role-info {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        @media (max-width: 480px) {
+            .style-ne {
+                padding: 30px 25px;
+            }
+
+            .register h1 {
+                font-size: 32px;
+            }
+
+            .form {
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="bubble"></div>
+<div class="bubble"></div>
+<div class="bubble"></div>
+<div class="bubble"></div>
+<div class="bubble"></div>
+<div class="bubble"></div>
+
+<div class="container">
+    <div class="style-ne">
+        <div class="register">
+            <h1>Đăng ký</h1>
+            <p>Tạo tài khoản mới để bắt đầu! 🚀</p>
+        </div>
+        <div class="form">
+            <form id="register-form">
+                <div id="error-message"></div>
+                <div id="success-message"></div>
+
+                <div class="input-group">
+                    <label for="fullName">👤 Họ và tên</label>
+                    <input type="text" id="fullName" placeholder="Nhập họ và tên đầy đủ" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="userEmail">📧 Email</label>
+                    <input type="email" id="userEmail" placeholder="example@email.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="phoneNumber">📱 Số điện thoại</label>
+                    <input type="tel" id="phoneNumber" placeholder="0909888779" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">🔒 Mật khẩu</label>
+                    <input type="password" id="password" placeholder="Tối thiểu 6 ký tự" required minlength="6">
+                </div>
+
+                <div class="input-group">
+                    <label for="confirmPassword">🔐 Xác nhận mật khẩu</label>
+                    <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu" required>
+                </div>
+
+
+
+                <button type="submit" id="submit">Đăng Ký Ngay</button>
+
+                <div class="form-link">
+                    <span>Đã có tài khoản? <a href="login.html">Đăng nhập tại đây</a></span>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const registerForm = document.getElementById('register-form');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const submitButton = document.getElementById('submit');
+
+        registerForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+
+            // Validation
+            if (!fullName || !email || !phoneNumber || !password || !confirmPassword) {
+                errorMessage.textContent = 'Vui lòng điền đầy đủ tất cả các trường!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorMessage.textContent = 'Mật khẩu phải có ít nhất 6 ký tự!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Mật khẩu xác nhận không khớp!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                errorMessage.textContent = 'Email không hợp lệ!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // Validate phone number (Vietnamese format)
+            const phoneRegex = /^(0|\+84)[0-9]{9,10}$/;
+            if (!phoneRegex.test(phoneNumber)) {
+                errorMessage.textContent = 'Số điện thoại không hợp lệ!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // Disable button during submission
+            submitButton.disabled = true;
+            submitButton.textContent = 'Đang xử lý...';
+
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        fullName: fullName,
+                        phoneNumber: phoneNumber,
+                        role: "STUDENT"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successMessage.textContent = 'Đăng ký thành công! Đang chuyển đến trang đăng nhập...';
+                    successMessage.style.display = 'block';
+
+                    // Reset form
+                    registerForm.reset();
+
+                    // Redirect to login page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+
+                } else {
+                    errorMessage.textContent = data.message || 'Đăng ký thất bại. Vui lòng thử lại!';
+                    errorMessage.style.display = 'block';
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Đăng Ký Ngay';
+                }
+            } catch (error) {
+                console.error('Lỗi khi gửi yêu cầu đăng ký:', error);
+                errorMessage.textContent = 'Đã xảy ra lỗi kết nối. Vui lòng thử lại sau!';
+                errorMessage.style.display = 'block';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Đăng Ký Ngay';
+            }
+        });
+
+        // Real-time password match validation
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+
+        confirmPasswordInput.addEventListener('input', function() {
+            if (this.value && passwordInput.value !== this.value) {
+                this.style.borderColor = '#dc2626';
+            } else if (this.value && passwordInput.value === this.value) {
+                this.style.borderColor = '#059669';
+            } else {
+                this.style.borderColor = '#e2e8f0';
+            }
+        });
+    });
+</script>
+</body>
+</html>

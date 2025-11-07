@@ -1,9 +1,10 @@
 package edu.uth.online_course_platform.services;
 
+import edu.uth.online_course_platform.models.User;
 import edu.uth.online_course_platform.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import org.springframework.security.core.userdetails.User;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        edu.uth.online_course_platform.models.User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         return org.springframework.security.core.userdetails.User
