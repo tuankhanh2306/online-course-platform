@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Entity
@@ -56,6 +57,10 @@ public class User implements UserDetails { // <-- IMPLEMENTS UserDetails ADDED
         INSTRUCTOR,
         ADMIN
     }
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude // Quan trọng để tránh lỗi StackOverflow
+    private Set<Progress> progresses; // NEW: Các tiến độ bài học của học viên này
 
     // REQUIRED METHODS FROM UserDetails INTERFACE
     @Override

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo khóa học mới</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* ==== CÀI ĐẶT CHUNG ==== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F8F9FA; color: #333; display: flex;
+            min-height: 100vh; margin: 0;
+        }
+        .dashboard-container { display: flex; width: 100%; }
+
+        /* ==== SIDEBAR ==== */
+        .sidebar { width: 240px; background-color: #1D2B4F; color: #A9B4D2; padding: 20px 0; flex-shrink: 0; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 100;}
+        .sidebar-header { padding: 0 20px 20px 20px; text-align: center; border-bottom: 1px solid #2C3A5E; margin-bottom: 20px; }
+        .sidebar-brand { font-size: 1.6rem; font-weight: bold; color: #FFFFFF; text-decoration: none; }
+        .sidebar-nav ul { list-style: none; padding: 0; }
+        .sidebar-nav li a { display: flex; align-items: center; padding: 14px 20px; text-decoration: none; color: #A9B4D2; font-weight: 500; transition: all 0.2s ease; border-left: 4px solid transparent; }
+        .sidebar-nav li a i { width: 20px; margin-right: 15px; font-size: 1.1rem; text-align: center; }
+        .sidebar-nav li.active a { background-color: #0052CC; color: #FFFFFF; border-left-color: #4C9AFF; }
+        .sidebar-nav li a:hover { background-color: #2C3A5E; color: #FFFFFF; }
+        .admin-only, .instructor-only, .student-only, .logged-in-only { display: none; }
+        .logged-out-only { display: block; }
+        #logout-button { cursor: pointer; margin-top: auto; border-top: 1px solid #2C3A5E; }
+
+        /* ==== NỘI DUNG CHÍNH ==== */
+        .main-content { flex-grow: 1; margin-left: 240px; padding: 24px 32px; background-color: #F8F9FA; min-height: 100vh; position: relative; z-index: 1;}
+        .main-header { margin-bottom: 32px; }
+        .page-title { font-size: 2rem; font-weight: 700; color: #1D2B4F; margin-bottom: 8px; }
+        .page-subtitle { font-size: 1rem; color: #667085; margin-bottom: 24px; }
+
+        /* ==== FORM CONTAINER ==== */
+        .form-container { max-width: 900px; margin: 0 auto; }
+        .form-card { background: #FFFFFF; border-radius: 12px; border: 1px solid #E0E0E0; padding: 32px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+        .form-section-title { font-size: 1.1rem; font-weight: 600; color: #1D2B4F; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #F0F2F5; }
+
+        /* ==== FORM ELEMENTS ==== */
+        .form-group { margin-bottom: 24px; }
+        .form-label { display: block; font-weight: 600; color: #1D2B4F; margin-bottom: 8px; font-size: 0.95rem; }
+        .form-label .required { color: #DE350B; margin-left: 2px; }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 12px 16px; border: 1px solid #E0E0E0; border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; background-color: #FFFFFF; color: #333; }
+        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #0052CC; box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1); }
+        .form-textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+        .form-helper { font-size: 0.85rem; color: #667085; margin-top: 6px; display: block; }
+        .form-input.error, .form-textarea.error, .form-select.error { border-color: #DE350B; }
+        .error-message { color: #DE350B; font-size: 0.85rem; margin-top: 6px; display: none; }
+
+        /* ==== RICH TEXT EDITOR WRAPPER ==== */
+        .editor-wrapper { border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; transition: all 0.2s; }
+        .editor-wrapper:focus-within { border-color: #0052CC; box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1); }
+        .ck-editor__editable_inline { min-height: 250px; padding: 16px; border: none !important; }
+        .ck.ck-editor__main > .ck-editor__editable { border: none !important; }
+        .ck.ck-editor__top { border-bottom: 1px solid #E0E0E0 !important; }
+
+        /* ==== BUTTONS ==== */
+        .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid #F0F2F5; }
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-color: #0052CC; color: #FFFFFF; }
+        .btn-primary:hover:not(:disabled) { background-color: #003C9A; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 82, 204, 0.3); }
+        .btn-secondary { background-color: #FFFFFF; color: #667085; border: 1px solid #C1C7D0; }
+        .btn-secondary:hover:not(:disabled) { background-color: #F8F9FA; border-color: #B3BAC5; }
+
+        /* ==== LOADING OVERLAY ==== */
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .loading-content { background: white; padding: 32px 48px; border-radius: 12px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        .loading-spinner { font-size: 2.5rem; color: #0052CC; margin-bottom: 16px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 1rem; color: #667085; font-weight: 500; }
+
+        /* ==== RESPONSIVE ==== */
+        @media (max-width: 992px) {
+            .sidebar { width: 200px; }
+            .main-content { margin-left: 200px; padding: 20px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .form-card { padding: 24px 20px; }
+            .form-actions { flex-direction: column-reverse; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-brand">Courses</a>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li id="menu-dashboard">
+                    <a href="admin_dashboard.html"><i class="fas fa-tachometer-alt"></i> <span>Dashboard Admin</span></a>
+                </li>
+                <li id="menu-users">
+                    <a href="admin_users.html"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
+                </li>
+
+                <li id="menu-my-courses">
+                    <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
+                </li>
+
+                <li id="menu-instructor-dashboard">
+                    <a href="instructor_dashboard.html"><i class="fas fa-chalkboard-teacher"></i> <span>Bảng ĐK Giảng Viên</span></a>
+                </li>
+
+                <li id="menu-browse">
+                    <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a>
+                </li>
+
+                <li id="menu-login">
+                    <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a>
+                </li>
+                <li id="logout-button">
+                    <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="main-header">
+            <h1 class="page-title"><i class="fas fa-plus-circle"></i> Tạo khóa học mới</h1>
+            <p class="page-subtitle">Nhập thông tin chi tiết để bắt đầu khóa học của bạn</p>
+        </header>
+
+        <div class="form-container">
+            <div class="form-card">
+                <h2 class="form-section-title">Thông tin khóa học</h2>
+
+                <form id="create-course-form" novalidate>
+                    <div class="form-group">
+                        <label for="courseTitle" class="form-label">
+                            Tiêu đề khóa học <span class="required">*</span>
+                        </label>
+                        <input
+                                type="text"
+                                class="form-input"
+                                id="courseTitle"
+                                name="title"
+                                required
+                                placeholder="Ví dụ: Lập trình Java cơ bản"
+                        >
+                        <span class="error-message" id="title-error">Vui lòng nhập tiêu đề khóa học</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shortDescription" class="form-label">
+                            Mô tả ngắn <span class="required">*</span>
+                        </label>
+                        <textarea
+                                class="form-textarea"
+                                id="shortDescription"
+                                name="shortDescription"
+                                rows="4"
+                                required
+                                placeholder="Tóm tắt ngắn gọn về khóa học (hiển thị trên thẻ khóa học)"
+                        ></textarea>
+                        <span class="error-message" id="short-desc-error">Vui lòng nhập mô tả ngắn</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="longDescription" class="form-label">
+                            Mô tả chi tiết
+                        </label>
+                        <div class="editor-wrapper">
+                            <textarea
+                                    class="form-textarea"
+                                    id="longDescription"
+                                    name="longDescription"
+                                    placeholder="Mô tả chi tiết về nội dung, mục tiêu, đối tượng của khóa học"
+                            ></textarea>
+                        </div>
+                        <span class="form-helper">Sử dụng định dạng rich text để tạo nội dung hấp dẫn</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price" class="form-label">
+                            Giá khóa học (VND) <span class="required">*</span>
+                        </label>
+                        <input
+                                type="number"
+                                class="form-input"
+                                id="price"
+                                name="price"
+                                required
+                                min="0"
+                                step="1000"
+                                placeholder="Ví dụ: 500000"
+                        >
+                        <span class="error-message" id="price-error">Vui lòng nhập giá hợp lệ</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="thumbnailUrl" class="form-label">
+                            URL ảnh đại diện
+                        </label>
+                        <input
+                                type="url"
+                                class="form-input"
+                                id="thumbnailUrl"
+                                name="thumbnailUrl"
+                                placeholder="https://example.com/course-thumbnail.jpg"
+                        >
+                        <span class="form-helper">Bạn có thể dùng một URL ảnh có sẵn hoặc bỏ trống</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="categoryId" class="form-label">
+                            Danh mục
+                        </label>
+                        <select class="form-select" id="categoryId" name="categoryId">
+                            <option value="">Chọn danh mục (Tùy chọn)</option>
+                        </select>
+                        <span class="form-helper">Chọn một danh mục phù hợp cho khóa học của bạn</span>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+                            <i class="fas fa-times"></i> Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="createCourseBtn">
+                            <i class="fas fa-check"></i> Tạo khóa học
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"><i class="fas fa-spinner"></i></div>
+        <div class="loading-text">Đang tạo khóa học, vui lòng đợi...</div>
+    </div>
+</div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script>
+    const API_BASE_URL = 'http://localhost:8080/api';
+    const createCourseForm = document.getElementById('create-course-form');
+    const createCourseBtn = document.getElementById('createCourseBtn');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const categoryIdSelect = document.getElementById('categoryId');
+    const logoutButton = document.getElementById('logout-button');
+
+    let token = localStorage.getItem('token');
+    let currentUserRole = localStorage.getItem('userRole');
+    let editor; // CKEditor instance
+
+    // Initialize CKEditor
+    ClassicEditor
+        .create(document.querySelector('#longDescription'), {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', 'strikethrough', '|',
+                    'link', 'bulletedList', 'numberedList', 'blockQuote', '|',
+                    'undo', 'redo'
+                ]
+            }
+        })
+        .then(newEditor => {
+            editor = newEditor;
+        })
+        .catch(error => {
+            console.error('Error initializing CKEditor:', error);
+        });
+
+    // Check login and role
+    function checkLoginStatusAndRedirect() {
+        if (!token || currentUserRole !== 'INSTRUCTOR') {
+            alert('Bạn cần đăng nhập với tài khoản Giảng viên để truy cập trang này.');
+            window.location.href = 'login.html';
+            return;
+        }
+        updateSidebarVisibility();
+    }
+
+    // DÁN HÀM MỚI NÀY VÀO TẤT CẢ 7 FILE
+    // (Thay thế hàm 'updateSidebarVisibility' cũ)
+
+    /**
+     * Hàm chuẩn hóa mới để cập nhật hiển thị sidebar
+     * dựa trên logic vai trò chính xác.
+     */
+    function updateSidebarVisibility() {
+        // 1. Lấy thông tin đăng nhập từ localStorage
+        const token = localStorage.getItem('token');
+        const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
+
+        // 2. Lấy TẤT CẢ các mục menu bằng ID
+        const menuBrowse = document.getElementById('menu-browse');
+        const menuMyCourses = document.getElementById('menu-my-courses');
+        const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
+        const menuAdminDashboard = document.getElementById('menu-dashboard');
+        const menuAdminUsers = document.getElementById('menu-users');
+        const menuLogin = document.getElementById('menu-login');
+        const menuLogout = document.getElementById('logout-button');
+
+        // 3. Ẩn tất cả các mục menu đặc thù trước
+        if (menuMyCourses) menuMyCourses.style.display = 'none';
+        if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
+        if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
+        if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
+        if (menuLogin) menuLogin.style.display = 'none';
+        if (menuLogout) menuLogout.style.display = 'none';
+
+        // 4. Luôn hiển thị 'Khóa học' (Browse)
+        if (menuBrowse) menuBrowse.style.display = 'block';
+
+        // 5. Xử lý logic Đăng nhập / Đăng xuất
+        if (token) {
+            // --- ĐÃ ĐĂNG NHẬP ---
+            if (menuLogout) menuLogout.style.display = 'block';
+
+            // 6. Xử lý hiển thị theo vai trò (Role)
+            if (userRole === 'STUDENT') {
+                if (menuMyCourses) menuMyCourses.style.display = 'block';
+
+            } else if (userRole === 'INSTRUCTOR') {
+                if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
+
+            } else if (userRole === 'ADMIN') {
+                if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
+                // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
+            }
+
+        } else {
+            // --- CHƯA ĐĂNG NHẬP ---
+            if (menuLogin) menuLogin.style.display = 'block';
+        }
+    }
+    /**
+     * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
+     */
+    function setActiveMenuItem() {
+        // 1. Lấy tên file của trang hiện tại (ví dụ: "index.html", "my_courses.html")
+        const currentPage = window.location.pathname.split('/').pop();
+
+        // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
+        const pageToMenuId = {
+            'index.html': 'menu-browse',
+            'my_courses.html': 'menu-my-courses',
+            'course_learning.html': 'menu-my-courses', // 'Vào học' vẫn thuộc 'Khóa học của tôi'
+            'instructor_dashboard.html': 'menu-instructor-dashboard',
+            'create_course.html': 'menu-instructor-dashboard', // 'Tạo khóa học' thuộc Bảng ĐK
+            'edit_course.html': 'menu-instructor-dashboard', // 'Sửa' thuộc Bảng ĐK
+            'manage_lessons.html': 'menu-instructor-dashboard', // 'Quản lý bài học' thuộc Bảng ĐK
+            'login.html': 'menu-login'
+            // Thêm các trang admin nếu cần
+            // 'admin_dashboard.html': 'menu-dashboard',
+            // 'admin_users.html': 'menu-users',
+        };
+
+        // 3. Tìm ID của mục menu cần active (mặc định là 'menu-browse' nếu không tìm thấy)
+        const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
+
+        // 4. Xóa class "active" khỏi TẤT CẢ các mục
+        document.querySelectorAll('.sidebar-nav li').forEach(li => {
+            li.classList.remove('active');
+        });
+
+        // 5. Thêm class "active" cho ĐÚNG mục menu
+        const activeMenuItem = document.getElementById(activeMenuId);
+        if (activeMenuItem) {
+            activeMenuItem.classList.add('active');
+        }
+    }
+
+    // Handle logout
+    function handleLogout() {
+        if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userFullName');
+            window.location.href = 'index.html';
+        }
+    }
+
+    // Fetch Categories
+    async function fetchCategories() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/categories`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.result && data.result.length > 0) {
+                    data.result.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.categoryId;
+                        option.textContent = category.name;
+                        categoryIdSelect.appendChild(option);
+                    });
+                }
+            } else {
+                console.error('Failed to fetch categories:', await response.text());
+            }
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    }
+
+    // Form validation
+    function validateForm() {
+        let isValid = true;
+
+        // Reset errors
+        document.querySelectorAll('.form-input, .form-textarea, .form-select').forEach(el => {
+            el.classList.remove('error');
+        });
+        document.querySelectorAll('.error-message').forEach(el => {
+            el.style.display = 'none';
+        });
+
+        // Validate title
+        const title = document.getElementById('courseTitle');
+        if (!title.value.trim()) {
+            title.classList.add('error');
+            document.getElementById('title-error').style.display = 'block';
+            isValid = false;
+        }
+
+        // Validate short description
+        const shortDesc = document.getElementById('shortDescription');
+        if (!shortDesc.value.trim()) {
+            shortDesc.classList.add('error');
+            document.getElementById('short-desc-error').style.display = 'block';
+            isValid = false;
+        }
+
+        // Validate price
+        const price = document.getElementById('price');
+        if (!price.value || parseFloat(price.value) < 0) {
+            price.classList.add('error');
+            document.getElementById('price-error').style.display = 'block';
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    // Handle form submission
+    createCourseForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        if (!token) {
+            alert('Bạn cần đăng nhập để tạo khóa học.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        loadingOverlay.style.display = 'flex';
+        createCourseBtn.disabled = true;
+
+        const courseData = {
+            title: document.getElementById('courseTitle').value.trim(),
+            shortDescription: document.getElementById('shortDescription').value.trim(),
+            longDescription: editor.getData(),
+            price: parseFloat(document.getElementById('price').value),
+            thumbnailUrl: document.getElementById('thumbnailUrl').value.trim(),
+            categoryId: document.getElementById('categoryId').value ? parseInt(document.getElementById('categoryId').value) : null
+        };
+
+        // Remove empty fields
+        if (!courseData.thumbnailUrl) delete courseData.thumbnailUrl;
+        if (!courseData.categoryId) delete courseData.categoryId;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/instructor/courses`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(courseData)
+            });
+
+            if (response.ok) {
+                alert('Khóa học đã được tạo thành công!');
+                window.location.href = 'instructor_dashboard.html';
+            } else if (response.status === 401 || response.status === 403) {
+                alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
+                handleLogout();
+            } else {
+                const errorData = await response.json();
+                alert(`Tạo khóa học thất bại: ${errorData.message || 'Lỗi không xác định'}`);
+            }
+        } catch (error) {
+            console.error('Error creating course:', error);
+            alert('Lỗi khi kết nối đến máy chủ.');
+        } finally {
+            loadingOverlay.style.display = 'none';
+            createCourseBtn.disabled = false;
+        }
+    });
+
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        checkLoginStatusAndRedirect();
+        fetchCategories();
+        setActiveMenuItem();
+        if (logoutButton) {
+            logoutButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleLogout();
+            });
+        }
+    });
+</script>
+</body>
+</html>

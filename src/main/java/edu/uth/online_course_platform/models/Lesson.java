@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Set;
+
 @Entity
 @Table(name = "lessons")
 @Data
@@ -21,6 +23,7 @@ public class Lesson {
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     @JsonBackReference
+    @ToString.Exclude
     private Course course;
 
     @Column(nullable = false, length = 255)
@@ -39,5 +42,7 @@ public class Lesson {
     @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", updatable = false)
     private java.time.LocalDateTime createdAt;
 
-
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude // Quan trọng để tránh lỗi StackOverflow
+    private Set<Progress> progresses; // NEW: Tiến độ của bài học này
 }

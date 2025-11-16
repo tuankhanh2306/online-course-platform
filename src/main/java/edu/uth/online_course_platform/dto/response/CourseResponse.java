@@ -1,5 +1,6 @@
 package edu.uth.online_course_platform.dto.response;
 
+import edu.uth.online_course_platform.models.Course;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,4 +25,11 @@ public class CourseResponse {
     private BigDecimal price;
 
     private String imageUrl;
+
+    private Course.CourseStatus status;
+
+
+    private int lessonCount;
+    private long enrollmentCount;
+    private BigDecimal courseRevenue;
 }

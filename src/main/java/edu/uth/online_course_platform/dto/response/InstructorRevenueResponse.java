@@ -8,5 +8,6 @@ import java.math.BigDecimal;
 @Builder
 public class InstructorRevenueResponse {
     private long totalEnrollments; // Tổng số lượt đăng ký
-    private BigDecimal totalRevenue;   // Tổng doanh thu
+    private BigDecimal totalRevenue;
+    private Long totalCourses;
 }

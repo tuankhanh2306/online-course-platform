@@ -27,6 +27,7 @@ public class Mapper {
                 .description(course.getDescription())
                 .price(course.getPrice())
                 .imageUrl(course.getImageUrl())
+                .status(course.getStatus())
                 .build();
     }
 }

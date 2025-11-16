@@ -16,29 +16,27 @@ import edu.uth.online_course_platform.repositories.CourseRepository;
 import edu.uth.online_course_platform.repositories.PaymentRepository;
 import edu.uth.online_course_platform.until.AuthorizationService;
 import edu.uth.online_course_platform.until.Mapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.nio.file.AccessDeniedException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CourseService {
-    @Autowired
-    private CourseRepository courseRepository;
-    @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
-    private LessonService lessonService;
-    @Autowired
-    private AuthorizationService authorizationService;
-    @Autowired
-    private Mapper mapper;
+
+    private final CourseRepository courseRepository;
+    private final PaymentRepository paymentRepository;
+    private final LessonService lessonService; // Inject LessonService
+    private final AuthorizationService authorizationService;
+    private final Mapper mapper;
 
     // Create new Course
+    @Transactional
     public CourseResponse createNewCourse(CreateCourseRequest createCourseRequest) {
         Course course = new Course();
         User instructor = authorizationService.getCurrentUser();
@@ -47,122 +45,85 @@ public class CourseService {
         course.setDescription(createCourseRequest.getDescription());
         course.setPrice(createCourseRequest.getPrice());
         course.setImageUrl(createCourseRequest.getImageUrl());
+        course.setStatus(Course.CourseStatus.DRAFT); // Khóa học mới tạo luôn ở trạng thái DRAFT
         return mapper.transformCourseToCourseResponse(courseRepository.save(course));
     }
 
-    // Get All course of current instructor:
+    // Get All courses of current instructor:
     @Transactional(readOnly = true)
-    public List<Course> getAllCourseOfInstructor() {
+    public List<CourseResponse> getAllCourseOfInstructor() {
         User instructor = authorizationService.getCurrentUser();
-        return instructor.getCourses();
-    }
 
-    public List<Course> getListCourses() {
-        return courseRepository.findAll();
-    }
+        // 1. Lấy danh sách khóa học CƠ BẢN
+        List<Course> courses = courseRepository.findByInstructor(instructor);
 
-    public Course getCourseById(Long id) {
-        return courseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-    }
-
-    public List<Lesson> getListLessonsByCourse(Long id) {
-        Course course = courseRepository.findById(id).orElseThrow(() ->new ResourceNotFoundException("Course not found"));
-        return course.getLessons();
-    }
-
-    public LessonResponse createNewLesson (Long courseId, CreateLessonRequest createLessonRequest) throws IllegalAccessException, ResourceNotFoundException {
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-        return lessonService.createNewLesson(course, createLessonRequest);
-    }
-
-    //  Logic cho Giảng viên gửi duyệt khóa học
-    @Transactional
-    public void submitCourse(Long courseId) {
-        User instructor = authorizationService.getCurrentUser();
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
-
-        if (!course.getInstructor().getUserId().equals(instructor.getUserId())) {
-            throw new RuntimeException("You are not the owner of this course.");
-        }
-
-        course.setStatus(Course.CourseStatus.PENDING_APPROVAL);
-        courseRepository.save(course);
-    }
-
-    // Logic cho Admin lấy danh sách các khóa học đang chờ duyệt
-    @Transactional(readOnly = true)
-    public List<CourseResponse> getPendingApprovalCourses() {
-        return courseRepository.findByStatus(Course.CourseStatus.PENDING_APPROVAL)
+        // 2. Lấy tất cả thống kê trong 3 câu query hiệu quả
+        Map<Long, BigDecimal> revenueMap = paymentRepository.findCourseRevenuesByInstructor(instructor)
                 .stream()
-                .map(mapper::transformCourseToCourseResponse)
+                .collect(Collectors.toMap(
+                        obj -> (Long) obj[0],
+                        obj -> (BigDecimal) obj[1]
+                ));
+
+        Map<Long, Long> enrollmentMap = paymentRepository.findCourseEnrollmentCountsByInstructor(instructor)
+                .stream()
+                .collect(Collectors.toMap(
+                        obj -> (Long) obj[0],
+                        obj -> (Long) obj[1]
+                ));
+
+        Map<Long, Long> lessonMap = courseRepository.findLessonCountsByInstructor(instructor)
+                .stream()
+                .collect(Collectors.toMap(
+                        obj -> (Long) obj[0],
+                        obj -> (Long) obj[1]
+                ));
+
+        // 3. Map Course sang CourseResponse và điền các thống kê
+        return courses.stream()
+                .map(course -> {
+                    // 3.1. Map các trường cơ bản (title, status, v.v.)
+                    CourseResponse response = mapper.transformCourseToCourseResponse(course);
+
+                    // 3.2. Lấy thống kê từ Map, mặc định là 0 nếu không tìm thấy
+                    BigDecimal courseRevenue = revenueMap.getOrDefault(course.getCourseId(), BigDecimal.ZERO);
+                    long enrollmentCount = enrollmentMap.getOrDefault(course.getCourseId(), 0L);
+                    int lessonCount = lessonMap.getOrDefault(course.getCourseId(), 0L).intValue();
+
+                    // 3.3. Set các giá trị thống kê vào DTO
+                    response.setCourseRevenue(courseRevenue);
+                    response.setEnrollmentCount(enrollmentCount);
+                    response.setLessonCount(lessonCount);
+
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
-    //  Logic cho Admin phê duyệt khóa học
-    @Transactional
-    public void approveCourse(Long courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
-        course.setStatus(Course.CourseStatus.PUBLISHED);
-        courseRepository.save(course);
-    }
-
-    // Logic cho Admin từ chối khóa học
-    @Transactional
-    public void rejectCourse(Long courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
-        course.setStatus(Course.CourseStatus.REJECTED);
-        courseRepository.save(course);
-    }
-
-    // dành cho user k cần đăng nhập
-    public List<CourseResponse> getPublishedCourses() {
-        return courseRepository.findByStatus(Course.CourseStatus.PUBLISHED)
-                .stream()
-                .map(mapper::transformCourseToCourseResponse)
-                .collect(Collectors.toList());
-    }
-
-    public CourseResponse getPublishedCourseById(Long courseId) {
-        Course course = courseRepository.findByCourseIdAndStatus(courseId, Course.CourseStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("Published course not found"));
-        return mapper.transformCourseToCourseResponse(course);
-    }
-
-    public InstructorRevenueResponse getInstructorRevenueDashboard() {
-        // 1. Lấy thông tin Giảng viên hiện tại
-        User instructor = authorizationService.getCurrentUser();
-
-        // 2. Gọi các phương thức repository để lấy số liệu
-        BigDecimal totalRevenue = paymentRepository.findTotalRevenueByInstructor(instructor);
-        long totalEnrollments = paymentRepository.countSuccessfulEnrollmentsByInstructor(instructor);
-
-        // 3. Xây dựng và trả về DTO
-        return InstructorRevenueResponse.builder()
-                .totalEnrollments(totalEnrollments)
-                .totalRevenue(totalRevenue)
-                .build();
-    }
-
-    /**
-     * Cho phép Giảng viên cập nhật thông tin khóa học của chính họ.
-     */
-    @Transactional
-    public CourseResponse updateCourse(Long courseId, UpdateCourseRequest request) {
-        // 1. Lấy thông tin Giảng viên và khóa học
+    // Lấy chi tiết một khóa học cụ thể của giảng viên (cho trang edit_course) - Nghiệp vụ đã bổ sung
+    @Transactional(readOnly = true)
+    public CourseResponse getInstructorCourseDetails(Long courseId) {
         User instructor = authorizationService.getCurrentUser();
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
 
-        // 2. KIỂM TRA QUYỀN SỞ HỮU: Giảng viên này có phải là người tạo khóa học không?
         if (!course.getInstructor().getUserId().equals(instructor.getUserId())) {
-            // Nếu không phải, ném lỗi 403 Forbidden
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        return mapper.transformCourseToCourseResponse(course);
+    }
+
+    // Update instructor's course by ID - Nghiệp vụ đã có
+    @Transactional
+    public CourseResponse updateCourse(Long courseId, UpdateCourseRequest request) {
+        User instructor = authorizationService.getCurrentUser();
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+
+        if (!course.getInstructor().getUserId().equals(instructor.getUserId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 3. Cập nhật các trường nếu chúng được cung cấp trong request
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
             course.setTitle(request.getTitle());
         }
@@ -176,17 +137,114 @@ public class CourseService {
             course.setImageUrl(request.getImageUrl());
         }
 
-        // Khi cập nhật, có thể nên đặt lại trạng thái về DRAFT để Admin duyệt lại
-        course.setStatus(Course.CourseStatus.DRAFT);
-
-        // 4. Lưu lại
         Course updatedCourse = courseRepository.save(course);
-
-        // 5. Trả về DTO
         return mapper.transformCourseToCourseResponse(updatedCourse);
     }
-    /*
-    * 1. Nguoi dung vao khoa hoc da co -> co san Id cua khoa hoc
-    * 2. Nguoi dung chon create new lesson -> thuc hien tao lesson truoc, sau do moi lay lesson vua tao them vao danh sach lesson trong course do
-    * */
+
+    // Submit course for approval - Nghiệp vụ đã có
+    @Transactional
+    public void submitCourse(Long courseId) {
+        User instructor = authorizationService.getCurrentUser();
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+
+        if (!course.getInstructor().getUserId().equals(instructor.getUserId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        course.setStatus(Course.CourseStatus.PENDING_APPROVAL);
+        courseRepository.save(course);
+    }
+
+    // Get instructor's revenue dashboard - Nghiệp vụ đã có
+    @Transactional(readOnly = true)
+    public InstructorRevenueResponse getInstructorRevenueDashboard() {
+        User instructor = authorizationService.getCurrentUser();
+
+        // 1. Lấy doanh thu (đã sửa lỗi 'COMPLETED')
+        BigDecimal totalRevenue = paymentRepository.findTotalRevenueByInstructor(instructor);
+
+        // 2. Lấy số lượt đăng ký (đã sửa lỗi 'COMPLETED')
+        long totalEnrollments = paymentRepository.countSuccessfulEnrollmentsByInstructor(instructor);
+
+        // 3. THÊM DÒNG NÀY: Lấy tổng số khóa học
+        long totalCourses = courseRepository.countByInstructor(instructor);
+
+        // 4. CẬP NHẬT TRÌNH BUILDER
+        return InstructorRevenueResponse.builder()
+                .totalEnrollments(totalEnrollments)
+                .totalRevenue(totalRevenue)
+                .totalCourses(totalCourses) // <-- Thêm trường này
+                .build();
+    }
+
+    // Lấy danh sách các bài học của một khóa học (thuộc sở hữu của giảng viên) - Nghiệp vụ đã có
+    @Transactional(readOnly = true)
+    public List<LessonResponse> getListLessonsByCourse(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+
+        if (!authorizationService.isOwnerVerified(course)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        List<Lesson> lessons = lessonService.getLessonsByCourse(courseId); // Gọi LessonService để lấy list Lessons
+        return lessons.stream()
+                .map(mapper::transformToLessonResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Create a new lesson in a course: - Nghiệp vụ đã có
+    @Transactional
+    public LessonResponse createNewLesson(Long courseId, CreateLessonRequest createLessonRequest) throws IllegalAccessException, ResourceNotFoundException {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+
+        if (!authorizationService.isOwnerVerified(course)) {
+            throw new IllegalAccessException("Bạn không có quyền sửa đổi khóa học này.");
+        }
+
+        return lessonService.createNewLesson(course, createLessonRequest);
+    }
+
+    // Các nghiệp vụ Admin (nếu có, không sửa):
+    @Transactional(readOnly = true)
+    public List<CourseResponse> getPendingApprovalCourses() {
+        return courseRepository.findByStatus(Course.CourseStatus.PENDING_APPROVAL)
+                .stream()
+                .map(mapper::transformCourseToCourseResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void approveCourse(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+        course.setStatus(Course.CourseStatus.PUBLISHED);
+        courseRepository.save(course);
+    }
+
+    @Transactional
+    public void rejectCourse(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+        course.setStatus(Course.CourseStatus.REJECTED);
+        courseRepository.save(course);
+    }
+
+    // Các nghiệp vụ Public (nếu có, không sửa):
+    @Transactional(readOnly = true)
+    public List<CourseResponse> getPublishedCourses() {
+        return courseRepository.findByStatus(Course.CourseStatus.PUBLISHED)
+                .stream()
+                .map(mapper::transformCourseToCourseResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public CourseResponse getPublishedCourseById(Long courseId) {
+        Course course = courseRepository.findByCourseIdAndStatus(courseId, Course.CourseStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("Published course not found"));
+        return mapper.transformCourseToCourseResponse(course);
+    }
 }

@@ -102,17 +102,33 @@
 
 <div class="dashboard-container">
     <aside class="sidebar">
-        <div class="sidebar-header"> <a href="index.html" class="sidebar-brand">Courses</a> </div>
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-brand">Courses</a>
+        </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="admin-only" id="menu-dashboard"> <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a> </li>
-                <li class="admin-only" id="menu-users"> <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a> </li>
-                <li class="logged-in-only active" id="menu-my-courses"> <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a> </li>
-                <li id="menu-browse"> <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a> </li>
-                <li class="logged-in-only" id="menu-wishlist"> <a href="#"><i class="fas fa-heart"></i> <span>Wishlist</span></a> </li>
-                <li id="menu-settings"> <a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a> </li>
-                <li class="logged-out-only" id="menu-login"> <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a> </li>
-                <li class="logged-in-only" id="logout-button"> <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a> </li>
+                <li class="admin-only" id="menu-dashboard">
+                    <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a>
+                </li>
+                <li class="admin-only" id="menu-users">
+                    <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
+                </li>
+                <li class="logged-in-only  active" id="menu-my-courses">
+                    <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
+                </li>
+                <li class="instructor-only" id="menu-instructor-dashboard">
+                    <a href="instructor_dashboard.html"><i class="fas fa-chalkboard-teacher"></i> <span>Bảng ĐK Giảng Viên</span></a>
+                </li>
+                <li id="menu-browse">
+                    <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a>
+                </li>
+
+                <li class="logged-out-only" id="menu-login">
+                    <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a>
+                </li>
+                <li class="logged-in-only" id="logout-button">
+                    <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -213,7 +229,8 @@
         // --- Initial Load ---
         checkLoginStatusAndRedirect();
         fetchMyCourses();
-
+        setActiveMenuItem();
+        updateSidebarVisibility();
         // --- Event Handlers ---
         myCourseGrid.addEventListener('click', (event) => {
             const targetButton = event.target.closest('button.action-button'); // Chỉ bắt sự kiện trên nút action
@@ -256,6 +273,42 @@
             });
         });
 
+        /**
+         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
+         */
+        function setActiveMenuItem() {
+            // 1. Lấy tên file của trang hiện tại (ví dụ: "index.html", "my_courses.html")
+            const currentPage = window.location.pathname.split('/').pop();
+
+            // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
+            const pageToMenuId = {
+                'index.html': 'menu-browse',
+                'my_courses.html': 'menu-my-courses',
+                'course_learning.html': 'menu-my-courses', // 'Vào học' vẫn thuộc 'Khóa học của tôi'
+                'instructor_dashboard.html': 'menu-instructor-dashboard',
+                'create_course.html': 'menu-instructor-dashboard', // 'Tạo khóa học' thuộc Bảng ĐK
+                'edit_course.html': 'menu-instructor-dashboard', // 'Sửa' thuộc Bảng ĐK
+                'manage_lessons.html': 'menu-instructor-dashboard', // 'Quản lý bài học' thuộc Bảng ĐK
+                'login.html': 'menu-login'
+                // Thêm các trang admin nếu cần
+                // 'admin_dashboard.html': 'menu-dashboard',
+                // 'admin_users.html': 'menu-users',
+            };
+
+            // 3. Tìm ID của mục menu cần active (mặc định là 'menu-browse' nếu không tìm thấy)
+            const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
+
+            // 4. Xóa class "active" khỏi TẤT CẢ các mục
+            document.querySelectorAll('.sidebar-nav li').forEach(li => {
+                li.classList.remove('active');
+            });
+
+            // 5. Thêm class "active" cho ĐÚNG mục menu
+            const activeMenuItem = document.getElementById(activeMenuId);
+            if (activeMenuItem) {
+                activeMenuItem.classList.add('active');
+            }
+        }
         // --- Functions ---
         function checkLoginStatusAndRedirect() { /* (Giữ nguyên như file bạn đã gửi) */ }
 
@@ -469,6 +522,53 @@
                 paymentError.textContent = `Lỗi hủy đăng ký: ${error.message}`;
                 paymentError.style.display = 'block';
                 paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
+            }
+        }
+        function updateSidebarVisibility() {
+            // 1. Lấy thông tin đăng nhập từ localStorage
+            const token = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
+
+            // 2. Lấy TẤT CẢ các mục menu bằng ID
+            const menuBrowse = document.getElementById('menu-browse');
+            const menuMyCourses = document.getElementById('menu-my-courses');
+            const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
+            const menuAdminDashboard = document.getElementById('menu-dashboard');
+            const menuAdminUsers = document.getElementById('menu-users');
+            const menuLogin = document.getElementById('menu-login');
+            const menuLogout = document.getElementById('logout-button');
+
+            // 3. Ẩn tất cả các mục menu đặc thù trước
+            if (menuMyCourses) menuMyCourses.style.display = 'none';
+            if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
+            if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
+            if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
+            if (menuLogin) menuLogin.style.display = 'none';
+            if (menuLogout) menuLogout.style.display = 'none';
+
+            // 4. Luôn hiển thị 'Khóa học' (Browse)
+            if (menuBrowse) menuBrowse.style.display = 'block';
+
+            // 5. Xử lý logic Đăng nhập / Đăng xuất
+            if (token) {
+                // --- ĐÃ ĐĂNG NHẬP ---
+                if (menuLogout) menuLogout.style.display = 'block';
+
+                // 6. Xử lý hiển thị theo vai trò (Role)
+                if (userRole === 'STUDENT') {
+                    if (menuMyCourses) menuMyCourses.style.display = 'block';
+
+                } else if (userRole === 'INSTRUCTOR') {
+                    if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
+
+                } else if (userRole === 'ADMIN') {
+                    if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
+                    // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
+                }
+
+            } else {
+                // --- CHƯA ĐĂNG NHẬP ---
+                if (menuLogin) menuLogin.style.display = 'block';
             }
         }
 

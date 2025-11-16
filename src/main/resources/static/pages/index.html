@@ -136,17 +136,34 @@
 
 <div class="dashboard-container">
     <aside class="sidebar">
-        <div class="sidebar-header"> <a href="index.html" class="sidebar-brand">Courses</a> </div>
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-brand">Courses</a>
+        </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="admin-only" id="menu-dashboard"> <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a> </li>
-                <li class="admin-only" id="menu-users"> <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a> </li>
-                <li class="logged-in-only" id="menu-my-courses"> <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a> </li>
-                <li id="menu-browse" class="active"> <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a> </li>
-                <li class="logged-in-only" id="menu-wishlist"> <a href="#"><i class="fas fa-heart"></i> <span>Wishlist</span></a> </li>
-                <li id="menu-settings"> <a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a> </li>
-                <li class="logged-out-only" id="menu-login"> <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a> </li>
-                <li class="logged-in-only" id="logout-button"> <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a> </li>
+
+                <li class="admin-only" id="menu-users">
+                    <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
+                </li>
+                <li class="logged-in-only" id="menu-my-courses">
+                    <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
+                </li>
+
+
+                <li class="admin-only" id="menu-admin-dashboard">
+                    <a href="admin_dashboard.html"><i class="fas fa-chalkboard-teacher"></i> <span>Bảng ĐK Admin</span></a>
+                </li>
+
+                <li id="menu-browse active">
+                    <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a>
+                </li>
+
+                <li class="logged-out-only" id="menu-login">
+                    <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a>
+                </li>
+                <li class="logged-in-only" id="logout-button">
+                    <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -240,6 +257,8 @@
         // --- Initial Load ---
         checkLoginStatus();
         fetchInitialData();
+        updateSidebarVisibility();
+        setActiveMenuItem()
 
         // --- Event Handlers ---
         // --- Event Handlers ---
@@ -366,6 +385,10 @@
         // --- CẬP NHẬT: displayCourses giờ nhận enrollmentMap ---
         function displayCourses(courses, enrollmentMap) {
             courseGrid.innerHTML = '';
+
+            // Lấy vai trò người dùng MỘT LẦN để kiểm tra
+            const userRole = localStorage.getItem('userRole');
+
             courses.forEach(course => {
                 const courseId = course.courseId;
                 const enrollmentInfo = enrollmentMap.get(courseId);
@@ -375,15 +398,26 @@
                 const imageSource = course.imageUrl ? course.imageUrl : `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=Course`;
 
                 let actionButtonHTML;
-                let buttonClass = "card-button enroll-action-btn"; // Class chung cho các nút có hành động
+                let buttonClass = "card-button enroll-action-btn"; // Class chung
                 let buttonIcon = "fa-shopping-cart";
                 let buttonText = "Đăng ký ngay";
                 let isDisabled = false;
                 let additionalStyle = "";
                 let dataAttributes = `data-course-id="${courseId}"`;
 
-                if (paymentStatus === 'COMPLETED') {
-                    buttonClass = "card-button"; // Không phải action button
+                // ==========================================================
+                // THÊM LOGIC KIỂM TRA VAI TRÒ (ROLE) TẠI ĐÂY
+                // ==========================================================
+                if (userRole === 'ADMIN' || userRole === 'INSTRUCTOR') {
+                    buttonClass = "card-button"; // Xóa class action
+                    buttonIcon = "fa-user-shield"; // Icon mới
+                    buttonText = "Chỉ dành cho học viên";
+                    isDisabled = true;
+                    additionalStyle = "background-color: #e0e0e0; border-color: #ccc; color: #777; cursor: not-allowed;";
+
+                    // --- LOGIC CŨ (Dành cho STUDENT hoặc khách) ---
+                } else if (paymentStatus === 'COMPLETED') {
+                    buttonClass = "card-button"; // Xóa class action
                     buttonIcon = "fa-check-circle";
                     buttonText = "Đã đăng ký";
                     isDisabled = true;
@@ -394,13 +428,16 @@
                     buttonText = "Hoàn tất thanh toán";
                     dataAttributes += ` data-enrollment-id="${enrollmentId}"`; // Thêm enrollmentId
                 } else if (paymentStatus === 'FAILED') {
-                    buttonClass += " failed primary";
+                    buttonClass += " failed primary failed-payment-btn";
                     buttonIcon = "fa-redo";
                     buttonText = "Thanh toán lại";
                     dataAttributes += ` data-enrollment-id="${enrollmentId}"`; // Thêm enrollmentId
-                } else { // Not enrolled (null or UNKNOWN)
+                } else { // Not enrolled (null or UNKNOWN) và là STUDENT/Guest
                     buttonClass += " primary enroll-now-btn"; // Class để biết đây là đăng ký mới
                 }
+                // ==========================================================
+                // KẾT THÚC LOGIC SỬA ĐỔI
+                // ==========================================================
 
                 actionButtonHTML = `<button class="${buttonClass}" ${dataAttributes} ${isDisabled ? 'disabled' : ''} style="${additionalStyle}">
                                         <i class="fas ${buttonIcon}"></i> ${buttonText}
@@ -677,6 +714,51 @@
             } catch (e) { console.error(e); }
             return null;
         }
+        /**
+         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
+         */
+        /**
+         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
+         * (PHIÊN BẢN HOÀN CHỈNH)
+         */
+        function setActiveMenuItem() {
+            // 1. Lấy tên file của trang hiện tại
+            const currentPage = window.location.pathname.split('/').pop();
+
+            // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
+            const pageToMenuId = {
+                'index.html': 'menu-browse',
+                'login.html': 'menu-login',
+
+                // Nhóm Student
+                'my_courses.html': 'menu-my-courses',
+                'course_learning.html': 'menu-my-courses',
+
+                // Nhóm Instructor
+                'instructor_dashboard.html': 'menu-instructor-dashboard',
+                'create_course.html': 'menu-instructor-dashboard',
+                'edit_course.html': 'menu-instructor-dashboard',
+                'manage_lessons.html': 'menu-instructor-dashboard',
+
+                // Nhóm Admin (ĐÃ BỔ SUNG)
+                'admin_dashboard.html': 'menu-dashboard',
+                // 'admin_users.html': 'menu-users', // (Bạn có thể thêm trang này sau)
+            };
+
+            // 3. Tìm ID của mục menu cần active
+            const activeMenuId = pageToMenuId[currentPage] || 'menu-browse'; // Mặc định là 'Khóa Học'
+
+            // 4. Xóa class "active" khỏi TẤT CẢ các mục
+            document.querySelectorAll('.sidebar-nav li').forEach(li => {
+                li.classList.remove('active');
+            });
+
+            // 5. Thêm class "active" cho ĐÚNG mục menu
+            const activeMenuItem = document.getElementById(activeMenuId);
+            if (activeMenuItem) {
+                activeMenuItem.classList.add('active');
+            }
+        }
 
         // --- Hàm Helper: Tìm nút trên card bằng courseId ---
         function findCardButton(courseId) {
@@ -685,6 +767,7 @@
             return courseGrid.querySelector(`.enroll-action-btn[data-course-id="${courseId}"]`);
         }
 
+        // --- Hàm Helper: Cập nhật trạng thái của 1 nút ---
         // --- Hàm Helper: Cập nhật trạng thái của 1 nút ---
         function updateCardButtonState(courseId, status) {
             const buttonElement = findCardButton(courseId); // Tìm nút
@@ -696,25 +779,25 @@
             // Reset thuộc tính
             buttonElement.disabled = false;
             buttonElement.style.cssText = "";
-            buttonElement.className = "card-button enroll-action-btn"; // Reset class
+            let buttonClass = "card-button enroll-action-btn"; // Khai báo buttonClass
             let buttonIcon = "fa-shopping-cart";
             let buttonText = "Đăng ký ngay";
             let dataAttributes = `data-course-id="${courseId}"`;
 
 
-            if (status === 'SUCCESS') {
+            if (status === 'SUCCESS' || status === 'COMPLETED') {
                 buttonClass = "card-button"; // Xóa class action
                 buttonIcon = "fa-check-circle";
                 buttonText = "Đã đăng ký";
                 buttonElement.disabled = true;
                 buttonElement.style.cssText = "background-color: #e0e0e0; border-color: #ccc; color: #777; cursor: default;";
             } else if (status === 'PENDING') {
-                buttonClass += " pending primary";
+                buttonClass += " pending primary pending-payment-btn";
                 buttonIcon = "fa-credit-card";
                 buttonText = "Hoàn tất thanh toán";
                 if (enrollmentId) dataAttributes += ` data-enrollment-id="${enrollmentId}"`;
             } else if (status === 'FAILED') {
-                buttonClass += " failed primary";
+                buttonClass += " failed primary failed-payment-btn";
                 buttonIcon = "fa-redo";
                 buttonText = "Thanh toán lại";
                 if (enrollmentId) dataAttributes += ` data-enrollment-id="${enrollmentId}"`;
@@ -784,6 +867,60 @@
                 handleConfirmPayment();
             }
         });
+        // DÁN HÀM MỚI NÀY VÀO TẤT CẢ 7 FILE
+// (Thay thế hàm 'updateSidebarVisibility' cũ)
+
+        /**
+         * Hàm chuẩn hóa mới để cập nhật hiển thị sidebar
+         * dựa trên logic vai trò chính xác.
+         */
+        function updateSidebarVisibility() {
+            // 1. Lấy thông tin đăng nhập từ localStorage
+            const token = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
+
+            // 2. Lấy TẤT CẢ các mục menu bằng ID
+            const menuBrowse = document.getElementById('menu-browse');
+            const menuMyCourses = document.getElementById('menu-my-courses');
+            const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
+            const menuAdminDashboard = document.getElementById('menu-dashboard');
+            const menuAdminUsers = document.getElementById('menu-users');
+            const menuLogin = document.getElementById('menu-login');
+            const menuLogout = document.getElementById('logout-button');
+
+            // 3. Ẩn tất cả các mục menu đặc thù trước
+            if (menuMyCourses) menuMyCourses.style.display = 'none';
+            if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
+            if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
+            if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
+            if (menuLogin) menuLogin.style.display = 'none';
+            if (menuLogout) menuLogout.style.display = 'none';
+
+            // 4. Luôn hiển thị 'Khóa học' (Browse)
+            if (menuBrowse) menuBrowse.style.display = 'block';
+
+            // 5. Xử lý logic Đăng nhập / Đăng xuất
+            if (token) {
+                // --- ĐÃ ĐĂNG NHẬP ---
+                if (menuLogout) menuLogout.style.display = 'block';
+
+                // 6. Xử lý hiển thị theo vai trò (Role)
+                if (userRole === 'STUDENT') {
+                    if (menuMyCourses) menuMyCourses.style.display = 'block';
+
+                } else if (userRole === 'INSTRUCTOR') {
+                    if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
+
+                } else if (userRole === 'ADMIN') {
+                    if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
+                    // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
+                }
+
+            } else {
+                // --- CHƯA ĐĂNG NHẬP ---
+                if (menuLogin) menuLogin.style.display = 'block';
+            }
+        }
     });
 </script>
 </body>

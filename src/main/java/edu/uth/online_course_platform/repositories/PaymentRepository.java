@@ -24,7 +24,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
             "JOIN p.enrollment e " +
             "JOIN e.course c " +
-            "WHERE c.instructor = :instructor AND p.status = 'SUCCESS'")
+            "WHERE c.instructor = :instructor AND p.status = 'COMPLETED'")
     BigDecimal findTotalRevenueByInstructor(@Param("instructor") User instructor);
 
     /**
@@ -34,8 +34,32 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT COUNT(p) FROM Payment p " +
             "JOIN p.enrollment e " +
             "JOIN e.course c " +
-            "WHERE c.instructor = :instructor AND p.status = 'SUCCESS'")
+            "WHERE c.instructor = :instructor AND p.status = 'COMPLETED'")
     long countSuccessfulEnrollmentsByInstructor(@Param("instructor") User instructor);
 
+
+    /**
+     * THÊM PHƯƠNG THỨC NÀY
+     * Lấy tổng doanh thu của mỗi khóa học cho một giảng viên.
+     * Trả về List<Object[]> với mỗi Object[] là [courseId (Long), totalRevenue (BigDecimal)]
+     */
+    @Query("SELECT c.courseId, COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN p.enrollment e " +
+            "JOIN e.course c " +
+            "WHERE c.instructor = :instructor AND p.status = 'COMPLETED' " +
+            "GROUP BY c.courseId")
+    List<Object[]> findCourseRevenuesByInstructor(@Param("instructor") User instructor);
+
+    /**
+     * THÊM PHƯƠNG THỨC NÀY
+     * Lấy tổng số lượt đăng ký thành công của mỗi khóa học cho một giảng viên.
+     * Trả về List<Object[]> với mỗi Object[] là [courseId (Long), count (Long)]
+     */
+    @Query("SELECT c.courseId, COUNT(p) FROM Payment p " +
+            "JOIN p.enrollment e " +
+            "JOIN e.course c " +
+            "WHERE c.instructor = :instructor AND p.status = 'COMPLETED' " +
+            "GROUP BY c.courseId")
+    List<Object[]> findCourseEnrollmentCountsByInstructor(@Param("instructor") User instructor);
 
 }

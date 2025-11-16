@@ -2,6 +2,7 @@ package edu.uth.online_course_platform.repositories;
 
 import edu.uth.online_course_platform.models.Course;
 import edu.uth.online_course_platform.models.Enrollment;
+import edu.uth.online_course_platform.models.Payment;
 import edu.uth.online_course_platform.models.User;
 import org.springframework.data.repository.CrudRepository;
 
@@ -17,4 +18,10 @@ public interface EnrollmentRepository extends CrudRepository<Enrollment, Long> {
     boolean existsByStudentAndCourse(User student, Course course);
 
     List<Enrollment> findByStudent(User student);
+
+    // NEW: Kiểm tra xem một học viên đã đăng ký khóa học với trạng thái thanh toán thành công chưa
+    // SỬA DÒNG NÀY
+// SỬA DÒNG NÀY
+    // SỬA DÒNG NÀY
+    boolean existsByStudent_UserIdAndCourse_CourseIdAndPayments_Status(Long studentId, Long courseId, Payment.PaymentStatus status);
 }

@@ -144,4 +144,13 @@ public class EnrollmentService {
         // Lưu ý: Do có CascadeType.ALL, việc xóa Enrollment sẽ tự động xóa các Payment liên quan.
         enrollmentRepository.delete(enrollment);
     }
+
+    /**
+     * KIỂM TRA MỚI: Kiểm tra xem một học viên đã đăng ký một khóa học cụ thể chưa.
+     */
+    @Transactional(readOnly = true)
+    public boolean isStudentEnrolledInCourse(Long studentId, Long courseId) {
+        return enrollmentRepository.existsByStudent_UserIdAndCourse_CourseIdAndPayments_Status(
+                studentId, courseId, Payment.PaymentStatus.COMPLETED);
+    }
 }
