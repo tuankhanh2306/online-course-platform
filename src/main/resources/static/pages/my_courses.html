@@ -316,16 +316,49 @@
             loadingIndicator.style.display = 'block';
             noCoursesMessage.style.display = 'none';
             myCourseGrid.innerHTML = '';
+            const token = localStorage.getItem('token');
+            if (!token) {
+                loadingIndicator.style.display = 'none';
+                myCourseGrid.innerHTML = '<p>Không tìm thấy token. Vui lòng đăng nhập.</p>';
+                // redirect to login page
+                setTimeout(() => window.location.href = 'login.html', 800);
+                return;
+            }
+
             try {
                 const response = await fetch('http://localhost:8080/api/users/my-enrollments', {
                     method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
                 });
+
                 loadingIndicator.style.display = 'none';
+
+                if (response.status === 401) {
+                    // Unauthorized: token hết hạn / không hợp lệ
+                    console.warn('401 Unauthorized - clearing token and redirecting to login');
+                    localStorage.removeItem('token');
+                    alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (response.status === 403) {
+                    // Forbidden: không có quyền
+                    console.warn('403 Forbidden - user lacks permission');
+                    alert('Bạn không có quyền xem trang này.');
+                    return;
+                }
                 if (!response.ok) {
                     console.error('Failed to fetch my courses:', response.status);
-                    myCourseGrid.innerHTML = '<p>Không thể tải khóa học của bạn.</p>'; return;
+                    const errText = await response.text().catch(()=>null);
+                    myCourseGrid.innerHTML = `<p>Không thể tải khóa học của bạn. (Mã: ${response.status})</p>`;
+                    console.debug('Error body:', errText);
+                    return;
                 }
+
                 const data = await response.json();
                 if (data.result && data.result.length > 0) {
                     allMyEnrollments = data.result; // Lưu lại dữ liệu
@@ -339,6 +372,7 @@
                 myCourseGrid.innerHTML = '<p>Đã xảy ra lỗi khi kết nối tới máy chủ.</p>';
             }
         }
+
 
         // --- CẬP NHẬT: displayMyCourses ---
         function displayMyCourses(enrollments) {

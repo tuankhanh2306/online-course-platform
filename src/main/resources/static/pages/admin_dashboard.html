@@ -75,6 +75,55 @@
         .btn-action.reject { background-color: #FFECEB; color: #BF2600; }
         .btn-action.reject:hover { background-color: #FFD2CC; }
 
+        /* ==== CSS CHO MODAL (PHẦN ĐƯỢC THÊM VÀO) ==== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #FFFFFF; border-radius: 12px;
+            width: 90%; max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: slide-down 0.3s ease-out;
+        }
+        @keyframes slide-down {
+            from { transform: translateY(-30px); opacity: 0; }
+            to   { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px; border-bottom: 1px solid #E0E0E0;
+        }
+        .modal-header h2 { font-size: 1.25rem; font-weight: 600; color: #1D2B4F; }
+        .modal-close {
+            font-size: 1.5rem; color: #667085; background: none; border: none;
+            cursor: pointer; padding: 0 5px;
+        }
+        .modal-body { padding: 24px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; font-weight: 600; color: #333; margin-bottom: 8px;
+        }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; font-size: 0.95rem;
+            border: 1px solid #D0D5DD; border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .form-group input[readonly] { background-color: #F8F9FA; cursor: not-allowed; }
+        .form-actions {
+            display: flex; justify-content: flex-end; gap: 12px;
+            margin-top: 24px;
+        }
+        .btn-secondary {
+            background-color: #F0F2F5; color: #333; border: 1px solid #D0D5DD;
+            padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
+        }
+        .btn-secondary:hover { background-color: #E0E0E0; }
+        /* ==== KẾT THÚC CSS MODAL ==== */
+
         /* ==== LOADING & MESSAGES ==== */
         .loading-indicator { text-align: center; padding: 60px 20px; color: #667085; }
         .loading-indicator i { font-size: 2rem; margin-bottom: 12px; display: block; animation: spin 1s linear infinite; }
@@ -203,6 +252,51 @@
                 <p>Không tìm thấy người dùng nào.</p>
             </div>
         </section>
+
+        <!-- BẮT ĐẦU: MODAL CHỈNH SỬA NGƯỜI DÙNG (PHẦN ĐƯỢC THÊM VÀO) -->
+        <div id="editUserModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Chỉnh sửa Người dùng</h2>
+                    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editUserId">
+
+                        <div class="form-group">
+                            <label for="editUserEmail">Email (Không thể thay đổi)</label>
+                            <input type="email" id="editUserEmail" readonly>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editUserFullName">Họ tên</label>
+                            <input type="text" id="editUserFullName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserFullName">Phone</label>
+                            <input type="number" id="editUserPhoneNumber" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editUserRole">Vai trò</label>
+                            <select id="editUserRole" required>
+                                <option value="STUDENT">STUDENT</option>
+                                <option value="INSTRUCTOR">INSTRUCTOR</option>
+                                <option value="ADMIN">ADMIN</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="closeEditModal()">Hủy</button>
+                            <button type="submit" class="btn-primary">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- KẾT THÚC: MODAL CHỈNH SỬA NGƯỜI DÙNG -->
+
     </main>
 </div>
 
@@ -225,6 +319,10 @@
     const totalUsersSpan = document.getElementById('total-users');
     const totalCoursesSpan = document.getElementById('total-courses');
     const totalPendingCoursesSpan = document.getElementById('total-pending-courses');
+
+    // Modal (PHẦN ĐƯỢC THÊM VÀO)
+    const editUserModal = document.getElementById('editUserModal');
+    const editUserForm = document.getElementById('editUserForm');
 
     const logoutButton = document.getElementById('logout-button');
     let token = localStorage.getItem('token');
@@ -426,22 +524,45 @@
         }
     }
 
+    // (PHẦN ĐƯỢC THAY THẾ)
+    // Thay thế hàm displayUsers cũ bằng hàm này
     function displayUsers(users) {
         usersTableTbody.innerHTML = '';
+
+        // Kiểm tra xem user có userId không
+        if (users.length > 0 && typeof users[0].userId === 'undefined') {
+            console.error("API /api/users không trả về 'userId'. Không thể thực hiện chức năng sửa.");
+            // Hiển thị lỗi cho người dùng nếu cần
+            alert("Lỗi: Dữ liệu người dùng từ API thiếu 'userId'. Chức năng sửa sẽ không hoạt động.");
+        }
+
         users.forEach(user => {
             const row = document.createElement('tr');
+
+            // Tạo chuỗi data cho hàm onclick
+            // Đảm bảo mọi trường đều có giá trị (hoặc là chuỗi rỗng) để tránh lỗi
+            const userData = JSON.stringify({
+                userId: user.userId,
+                fullName: user.fullName || '',
+                email: user.email || '',
+                role: user.role || 'STUDENT',
+                phoneNumber: user.phoneNumber || '',
+            }).replace(/"/g, '&quot;'); // Escape dấu ngoặc kép cho HTML
+
             row.innerHTML = `
-                <td class="text-cell">${escapeHtml(user.fullName)}</td>
-                <td>${escapeHtml(user.email)}</td>
-                <td><span class="status-badge status-${user.role}">${user.role}</span></td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn-action" title="Chỉnh sửa (chưa làm)">
-                            <i class="fas fa-edit"></i> Sửa
-                        </button>
-                    </div>
-                </td>
-            `;
+            <td class="text-cell">${escapeHtml(user.fullName)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td><span class="status-badge status-${user.role}">${user.role}</span></td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-action"
+                            title="Chỉnh sửa người dùng"
+                            onclick="openEditModal(${userData})">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                </div>
+            </td>
+        `;
             usersTableTbody.appendChild(row);
         });
     }
@@ -524,6 +645,79 @@
         return div.innerHTML;
     }
 
+    // --- CÁC HÀM XỬ LÝ MODAL (PHẦN ĐƯỢC THÊM VÀO) ---
+
+    // Mở modal và điền thông tin
+    function openEditModal(user) {
+        if (!user || typeof user.userId === 'undefined') {
+            console.error("Dữ liệu người dùng không hợp lệ:", user);
+            alert("Không thể tải thông tin người dùng này.");
+            return;
+        }
+
+        // Điền dữ liệu vào form
+        document.getElementById('editUserId').value = user.userId;
+        document.getElementById('editUserEmail').value = user.email;
+        document.getElementById('editUserFullName').value = user.fullName;
+        document.getElementById('editUserRole').value = user.role;
+        document.getElementById('editUserPhoneNumber').value = user.phoneNumber;
+
+
+        // Hiển thị modal
+        editUserModal.style.display = 'flex';
+    }
+
+    // Đóng modal
+    function closeEditModal() {
+        editUserModal.style.display = 'none';
+    }
+
+    // Xử lý khi submit form
+    async function handleEditUserSubmit(event) {
+        event.preventDefault(); // Ngăn form tải lại trang
+
+        const userId = document.getElementById('editUserId').value;
+        const fullName = document.getElementById('editUserFullName').value;
+        const role = document.getElementById('editUserRole').value;
+        const phone = document.getElementById('editUserPhoneNumber').value;
+        const email = document.getElementById('editUserEmail').value;
+        const updatedUserData = {
+            fullName: fullName,
+            phoneNumber: phone,
+            email: email,
+            role: role
+            // Backend có thể yêu cầu thêm các trường khác
+        };
+
+        // **QUAN TRỌNG: Giả định API của bạn là: PUT /api/admin/users/{userId}**
+        // Bạn cần tạo API này trong Backend (ví dụ: AdminController)
+        const API_URL = `${API_BASE_URL}/users/${userId}`;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedUserData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Lỗi khi cập nhật người dùng');
+            }
+
+            alert('Cập nhật người dùng thành công!');
+            closeEditModal();
+            await fetchAllUsers(); // Tải lại danh sách người dùng
+
+        } catch (error) {
+            console.error('Lỗi handleEditUserSubmit:', error);
+            alert('Lỗi: ' + error.message);
+        }
+    }
+
     // --- KHỞI CHẠY ---
     document.addEventListener('DOMContentLoaded', () => {
         checkLoginStatusAndRedirect();
@@ -535,6 +729,12 @@
                 e.preventDefault();
                 handleLogout();
             });
+        }
+
+        // (PHẦN ĐƯỢC THÊM VÀO)
+        // Gán sự kiện submit cho form
+        if (editUserForm) {
+            editUserForm.addEventListener('submit', handleEditUserSubmit);
         }
     });
 </script>

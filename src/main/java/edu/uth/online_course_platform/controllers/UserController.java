@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 
@@ -49,6 +48,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
+
     public ResponseEntity<UserResponseDto> getCurrentUser(HttpServletRequest request) {
         String token = extractUsernameFromToken(request);
         String email = jwtUtils.extractEmail(token);
@@ -60,6 +60,7 @@ public class UserController {
 
     //lấy user theo id
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long id) {
         UserResponseDto user = userService.getUserByID(id);
         return ResponseEntity.ok(user);
@@ -67,12 +68,14 @@ public class UserController {
 
     //tạo user mới
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponseDto> createUser(@RequestBody @Valid UserCreateDto userCreateDto) {
         UserResponseDto user = userService.createUser(userCreateDto);
         return ResponseEntity.ok(user);
     }
 
     //cập nhật user
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDto> updateUser(@PathVariable long id ,@RequestBody @Valid UserCreateDto userCreateDto){
         UserResponseDto user = userService.updateUser(id, userCreateDto);
@@ -80,13 +83,14 @@ public class UserController {
     }
 
     //xóa user
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
-    // đổi mật khẩu user
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/change-password")
     public ResponseEntity<?> changePassword(@PathVariable long id, @RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
         userService.changePassword(id, changePasswordRequest);

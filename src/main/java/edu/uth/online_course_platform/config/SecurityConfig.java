@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/courses").permitAll()             // Lấy danh sách tất cả khóa học đã publish (bất kỳ ai)
                         .requestMatchers("/api/courses/{courseId}").permitAll()  // Xem chi tiết khóa học đã publish (bất kỳ ai)
                         // Các endpoint yêu cầu vai trò ADMIN
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Các endpoint yêu cầu vai trò INSTRUCTOR
                         .requestMatchers("/api/instructor/**").hasRole("INSTRUCTOR")
