@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Cấu hình phân quyền cho các HTTP requests
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/pages/**", "/js/**", "/css/**", "/images/**").permitAll()
                         // Các endpoint public (không cần xác thực)
                         .requestMatchers("/api/auth/**").permitAll()             // Đăng ký, Đăng nhập
                         .requestMatchers("/api/public/**").permitAll()           // Các tài nguyên công khai khác
@@ -60,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Các endpoint yêu cầu vai trò INSTRUCTOR
                         .requestMatchers("/api/instructor/**").hasRole("INSTRUCTOR")
+                        .requestMatchers("/").permitAll()
                         // Các endpoint yêu cầu vai trò STUDENT
                         .requestMatchers("/api/student/**").hasRole("STUDENT") // Ví dụ cho các API của học viên
                         // Tất cả các request khác (không khớp với các quy tắc trên) phải được xác thực

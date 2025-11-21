@@ -43,8 +43,8 @@
         /* ==== COURSE CARD ==== */
         .course-card { background: #FFFFFF; border-radius: 12px; border: 1px solid #E0E0E0; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; }
         .course-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07); }
-        .card-image-container { position: relative; }
-        .card-image-container img { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .card-image-container { position: relative; height: 180px; background-color: #f0f0f0; }
+        .card-image-container img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .badge { position: absolute; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: white; }
         .badge-top-right { top: 12px; right: 12px; }
         .bg-blue { background-color: #0052CC; } .bg-orange { background-color: #FF8B00; } .bg-green { background-color: #36B37E; } .bg-purple { background-color: #6554C0; } .bg-red { background-color: #DE350B; } .bg-gray { background-color: #888; }
@@ -143,7 +143,7 @@
             <ul>
 
                 <li class="admin-only" id="menu-users">
-                    <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
+                    <a href="admin_users.html"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
                 </li>
                 <li class="logged-in-only" id="menu-my-courses">
                     <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
@@ -154,6 +154,9 @@
                     <a href="admin_dashboard.html"><i class="fas fa-chalkboard-teacher"></i> <span>Bảng ĐK Admin</span></a>
                 </li>
 
+                <li class="instructor-only active" id="menu-instructor-dashboard">
+                    <a href="instructor_dashboard.html"><i class="fas fa-chalkboard-teacher"></i> <span>Bảng ĐK Giảng Viên</span></a>
+                </li>
                 <li id="menu-browse active">
                     <a href="index.html"><i class="fas fa-compass"></i> <span>Khóa Học</span></a>
                 </li>
@@ -227,7 +230,12 @@
     </div>
 </div>
 
+<script src="js/common.js"></script> <!-- Giả sử file common chứa các biến chung -->
 <script>
+    // --- THÊM CẤU HÌNH SERVER ---
+    const SERVER_URL = 'http://localhost:8080';
+    const API_BASE_URL = `${SERVER_URL}/api`;
+
     document.addEventListener('DOMContentLoaded', () => {
         // --- DOM Elements ---
         const token = localStorage.getItem('token');
@@ -261,7 +269,6 @@
         setActiveMenuItem()
 
         // --- Event Handlers ---
-        // --- Event Handlers ---
         courseGrid.addEventListener('click', (event) => {
             const targetButton = event.target.closest('button'); // Get the button element
             if (!targetButton) return; // Exit if click wasn't on a button
@@ -269,35 +276,30 @@
             const courseId = targetButton.dataset.courseId;
             if (!courseId) return; // Exit if button doesn't have courseId
 
-            // *** FIX: Use if / else if to separate logic ***
             if (targetButton.classList.contains('view-details-btn')) {
-                // Action 1: Show details
                 showDetailsModal(courseId);
             } else if (targetButton.classList.contains('enroll-now-btn')) {
-                // Action 2: Enroll new course
                 handleEnrollClick(courseId, targetButton);
             } else if (targetButton.classList.contains('pending-payment-btn') || targetButton.classList.contains('failed-payment-btn')) {
-                // Action 3: Pay for existing enrollment
                 const enrollmentId = targetButton.dataset.enrollmentId;
                 if (enrollmentId) {
-                    showPaymentModal(courseId, enrollmentId); // Directly show payment modal
+                    showPaymentModal(courseId, enrollmentId);
                 } else {
                     console.error("Missing enrollmentId on button for course:", courseId);
                     alert("Lỗi: Không tìm thấy thông tin đăng ký.");
                 }
             }
         });
-        // Detail Modal
+
         detailModalCloseBtn.addEventListener('click', closeDetailModal);
         detailModalOverlay.addEventListener('click', (event) => { if (event.target === detailModalOverlay) closeDetailModal(); });
-        // Payment Modal
+
         paymentModalCloseBtn.addEventListener('click', closePaymentModal);
-        paymentLaterBtn.addEventListener('click', closePaymentModal); // "Thanh toán sau" chỉ đóng modal
+        paymentLaterBtn.addEventListener('click', closePaymentModal);
         paymentConfirmBtn.addEventListener('click', handleConfirmPayment);
         paymentCancelBtn.addEventListener('click', handleCancelPayment);
         paymentModalOverlay.addEventListener('click', (event) => { if (event.target === paymentModalOverlay) closePaymentModal(); });
 
-        // Payment method selection
         document.querySelectorAll('.payment-method').forEach(method => {
             method.addEventListener('click', function() {
                 document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
@@ -306,7 +308,19 @@
             });
         });
 
-        // --- Core Functions ---
+        // --- Helper Functions ---
+
+        /**
+         * Hàm xử lý URL ảnh: Nếu URL là tương đối (vd: /uploads/a.jpg), thêm domain server vào trước.
+         */
+        function resolveImageUrl(url) {
+            if (!url) return null;
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            // Nếu URL bắt đầu bằng /, nối với SERVER_URL
+            return `${SERVER_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+        }
 
         function checkLoginStatus() {
             const loggedInElements = document.querySelectorAll('.logged-in-only');
@@ -316,7 +330,6 @@
                 loggedInElements.forEach(el => el.style.display = 'block');
                 loggedOutElements.forEach(el => el.style.display = 'none');
                 if (userRole === 'ADMIN') adminElements.forEach(el => el.style.display = 'block');
-                console.log(`Welcome ${userFullName} (${userRole})`);
             } else {
                 loggedInElements.forEach(el => el.style.display = 'none');
                 loggedOutElements.forEach(el => el.style.display = 'block');
@@ -339,39 +352,32 @@
 
         async function fetchMyEnrollments() {
             try {
-                const response = await fetch('http://localhost:8080/api/users/my-enrollments', {
+                const response = await fetch(`${API_BASE_URL}/users/my-enrollments`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) { console.warn('Could not fetch user enrollments:', response.status); return; }
                 const data = await response.json();
                 if (data.result && Array.isArray(data.result)) {
                     data.result.forEach(enrollment => {
-                        // *** QUAN TRỌNG: Giả sử API trả về paymentStatus ***
                         enrollmentDetailsMap.set(enrollment.courseId, {
                             enrollmentId: enrollment.enrollmentId,
-                            // Lấy paymentStatus, nếu không có thì mặc định là UNKNOWN
                             paymentStatus: enrollment.paymentStatus || 'UNKNOWN'
                         });
                     });
-                    console.log("Enrollment Details Map:", enrollmentDetailsMap);
                 }
             } catch (error) { console.error('Error fetching enrollments:', error); }
         }
 
-        async function fetchPublicCourses() { // Đổi tên hàm này
+        async function fetchPublicCourses() {
             if(loadingIndicator.style.display !== 'block') { loadingIndicator.style.display = 'block'; courseGrid.innerHTML = ''; }
             try {
-                const response = await fetch('http://localhost:8080/api/public/courses');
+                const response = await fetch(`${API_BASE_URL}/public/courses`);
                 loadingIndicator.style.display = 'none';
                 if (!response.ok) { throw new Error(response.status); }
                 const data = await response.json();
                 if (data.result && data.result.length > 0) {
                     contentTitle.textContent = "Tất cả khóa học";
-
-                    // *** SỬA Ở ĐÂY ***
-                    // Truyền enrollmentDetailsMap (tên biến toàn cục) vào hàm displayCourses
                     displayCourses(data.result, enrollmentDetailsMap);
-
                 } else {
                     contentTitle.textContent = "Chưa có khóa học nào";
                     courseGrid.innerHTML = '<p>Hiện tại chưa có khóa học nào được xuất bản.</p>';
@@ -382,11 +388,8 @@
             }
         }
 
-        // --- CẬP NHẬT: displayCourses giờ nhận enrollmentMap ---
         function displayCourses(courses, enrollmentMap) {
             courseGrid.innerHTML = '';
-
-            // Lấy vai trò người dùng MỘT LẦN để kiểm tra
             const userRole = localStorage.getItem('userRole');
 
             courses.forEach(course => {
@@ -395,29 +398,25 @@
                 const paymentStatus = enrollmentInfo ? enrollmentInfo.paymentStatus : null;
                 const enrollmentId = enrollmentInfo ? enrollmentInfo.enrollmentId : null;
 
-                const imageSource = course.imageUrl ? course.imageUrl : `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=Course`;
+                // --- SỬA LỖI URL ẢNH TẠI ĐÂY ---
+                const imageSource = resolveImageUrl(course.imageUrl) || `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=${encodeURIComponent(course.title || 'Course')}`;
 
                 let actionButtonHTML;
-                let buttonClass = "card-button enroll-action-btn"; // Class chung
+                let buttonClass = "card-button enroll-action-btn";
                 let buttonIcon = "fa-shopping-cart";
                 let buttonText = "Đăng ký ngay";
                 let isDisabled = false;
                 let additionalStyle = "";
                 let dataAttributes = `data-course-id="${courseId}"`;
 
-                // ==========================================================
-                // THÊM LOGIC KIỂM TRA VAI TRÒ (ROLE) TẠI ĐÂY
-                // ==========================================================
                 if (userRole === 'ADMIN' || userRole === 'INSTRUCTOR') {
-                    buttonClass = "card-button"; // Xóa class action
-                    buttonIcon = "fa-user-shield"; // Icon mới
+                    buttonClass = "card-button";
+                    buttonIcon = "fa-user-shield";
                     buttonText = "Chỉ dành cho học viên";
                     isDisabled = true;
                     additionalStyle = "background-color: #e0e0e0; border-color: #ccc; color: #777; cursor: not-allowed;";
-
-                    // --- LOGIC CŨ (Dành cho STUDENT hoặc khách) ---
-                } else if (paymentStatus === 'COMPLETED') {
-                    buttonClass = "card-button"; // Xóa class action
+                } else if (paymentStatus === 'SUCCESS' || paymentStatus === 'COMPLETED') { // Hỗ trợ cả 2 trạng thái
+                    buttonClass = "card-button";
                     buttonIcon = "fa-check-circle";
                     buttonText = "Đã đăng ký";
                     isDisabled = true;
@@ -426,27 +425,25 @@
                     buttonClass += " pending primary pending-payment-btn";
                     buttonIcon = "fa-credit-card";
                     buttonText = "Hoàn tất thanh toán";
-                    dataAttributes += ` data-enrollment-id="${enrollmentId}"`; // Thêm enrollmentId
+                    dataAttributes += ` data-enrollment-id="${enrollmentId}"`;
                 } else if (paymentStatus === 'FAILED') {
                     buttonClass += " failed primary failed-payment-btn";
                     buttonIcon = "fa-redo";
                     buttonText = "Thanh toán lại";
-                    dataAttributes += ` data-enrollment-id="${enrollmentId}"`; // Thêm enrollmentId
-                } else { // Not enrolled (null or UNKNOWN) và là STUDENT/Guest
-                    buttonClass += " primary enroll-now-btn"; // Class để biết đây là đăng ký mới
+                    dataAttributes += ` data-enrollment-id="${enrollmentId}"`;
+                } else {
+                    buttonClass += " primary enroll-now-btn";
                 }
-                // ==========================================================
-                // KẾT THÚC LOGIC SỬA ĐỔI
-                // ==========================================================
 
                 actionButtonHTML = `<button class="${buttonClass}" ${dataAttributes} ${isDisabled ? 'disabled' : ''} style="${additionalStyle}">
                                         <i class="fas ${buttonIcon}"></i> ${buttonText}
                                     </button>`;
 
+                // Thêm onerror vào thẻ img để xử lý ảnh lỗi
                 const courseCardHTML = `
                      <div class="course-card">
                          <div class="card-image-container">
-                             <img src="${imageSource}" alt="${course.title || 'Course Image'}">
+                             <img src="${imageSource}" alt="${course.title || 'Course Image'}" onerror="this.onerror=null; this.src='https://via.placeholder.com/350x180/e0e0e0/333333?text=Image+Error';">
                              <div class="badge badge-top-right ${getPriceBadgeColor(course.price)}">
                                  ${formatPrice(course.price)}
                              </div>
@@ -479,7 +476,7 @@
             detailModalOverlay.style.display = 'flex';
             modalBody.innerHTML = '<p id="modal-loading">Đang tải chi tiết...</p>';
             try {
-                const response = await fetch(`http://localhost:8080/api/public/courses/${courseId}`);
+                const response = await fetch(`${API_BASE_URL}/public/courses/${courseId}`);
                 if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
                 const data = await response.json();
                 const course = data.result;
@@ -512,7 +509,7 @@
             let enrollmentIdToUse = null;
 
             try {
-                const enrollResponse = await fetch(`http://localhost:8080/api/courses/${courseId}/enroll`, {
+                const enrollResponse = await fetch(`${API_BASE_URL}/courses/${courseId}/enroll`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                 });
@@ -533,11 +530,7 @@
                     } else {
                         // Trường hợp 2: Lỗi khác (500, 400, ...)
                         throw new Error(`Enroll failed (${enrollResponse.status}): ${enrollData.message || 'Lỗi không xác định'}`);
-
                     }
-                    // Lưu ý: Không có 'return' ở đây, để 'finally' có thể chạy (nếu bạn dùng finally)
-                    // Hoặc chúng ta sẽ dựa vào catch block
-
                 } else {
                     // Trường hợp 3: Đăng ký thành công (200 OK)
                     enrollmentIdToUse = enrollData.result?.enrollmentId;
@@ -550,16 +543,13 @@
                 }
 
             } catch (error) {
-                // Trường hợp 4: Lỗi (Bao gồm lỗi ném ra từ 'throw new Error' ở trên)
                 console.error('Error in handleEnrollClick:', error);
                 alert(`Đã xảy ra lỗi: ${error.message}`);
                 updateCardButtonState(courseId, null);
             }
-            // Không cần 'finally' vì 'updateCardButtonState' đã xử lý
         }
 
         async function showPaymentModal(courseId, enrollmentId) {
-            console.log(`Showing payment modal for course ${courseId}, enrollment ${enrollmentId}`);
             currentModalCourseId = parseInt(courseId);
             currentModalEnrollmentId = parseInt(enrollmentId);
 
@@ -573,6 +563,7 @@
             paymentConfirmBtn.disabled = false;
             paymentCancelBtn.disabled = false;
             paymentLaterBtn.disabled = false;
+
             // Reset payment method selection
             const defaultMethod = document.querySelector('.payment-method input[value="momo"]');
             if(defaultMethod) defaultMethod.checked = true;
@@ -582,7 +573,7 @@
             paymentModalOverlay.style.display = 'flex';
 
             try {
-                const response = await fetch(`http://localhost:8080/api/public/courses/${courseId}`);
+                const response = await fetch(`${API_BASE_URL}/public/courses/${courseId}`);
                 if (!response.ok) throw new Error('Could not load course details.');
                 const data = await response.json();
                 const course = data.result;
@@ -600,7 +591,6 @@
 
         function closePaymentModal() {
             paymentModalOverlay.style.display = 'none';
-            // Cập nhật lại nút trên thẻ khi đóng modal
             updateCardButtonState(currentModalCourseId, enrollmentDetailsMap.get(currentModalCourseId)?.paymentStatus);
             currentModalCourseId = null;
             currentModalEnrollmentId = null;
@@ -616,7 +606,7 @@
             paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:8080/api/payments/simulate-success/${enrollmentId}`, {
+                const response = await fetch(`${API_BASE_URL}/payments/simulate-success/${enrollmentId}`, {
                     method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
@@ -626,7 +616,6 @@
                     throw new Error(`Payment failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
                 }
 
-                console.log('Payment simulation successful.');
                 alert(`Thanh toán thành công qua ${getPaymentMethodName(selectedMethod)}!`);
                 enrollmentDetailsMap.set(courseId, { enrollmentId: enrollmentId, paymentStatus: 'SUCCESS' });
                 closePaymentModal();
@@ -643,6 +632,7 @@
                 updateCardButtonState(courseId, 'FAILED');
             }
         }
+
         async function handleCancelPayment() {
             const enrollmentId = currentModalEnrollmentId;
             const courseId = currentModalCourseId;
@@ -654,39 +644,32 @@
             paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
 
             try {
-                // Gọi API DELETE backend
-                const response = await fetch(`http://localhost:8080/api/enrollments/${enrollmentId}`, {
+                const response = await fetch(`${API_BASE_URL}/enrollments/${enrollmentId}`, {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) {
                     const data = await response.json();
                     throw new Error(`Cancel failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
                 }
-                console.log("Enrollment cancelled on backend.");
 
-                // Cập nhật Frontend
-                enrollmentDetailsMap.delete(courseId); // Xóa khỏi Map
+                enrollmentDetailsMap.delete(courseId);
                 alert("Đã hủy lượt đăng ký.");
-                closePaymentModal(); // Đóng modal (sẽ tự động cập nhật nút)
+                closePaymentModal();
 
             } catch (error) {
                 console.error('Error cancelling enrollment:', error);
                 paymentLoading.style.display = 'none';
                 paymentError.textContent = `Lỗi hủy đăng ký: ${error.message}`;
                 paymentError.style.display = 'block';
-                // Bật lại nút
                 paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
             }
         }
 
-        // --- Hàm Helper: Tìm chi tiết Enrollment (fetch lại nếu cần) ---
         async function findEnrollmentDetails(courseId) {
             const courseIdNum = parseInt(courseId);
-            // Kiểm tra Map trước
             const existing = enrollmentDetailsMap.get(courseIdNum);
             if (existing && existing.enrollmentId) return existing;
 
-            // Nếu không có, fetch lại (tốn tài nguyên hơn, nhưng đảm bảo đúng)
             console.warn("Enrollment ID not found in map, re-fetching...");
             const enrollments = await fetchMyEnrollmentsData();
             if (!enrollments) return null;
@@ -694,99 +677,69 @@
             const found = enrollments.find(e => e.courseId == courseId);
             if (found) {
                 const details = { enrollmentId: found.enrollmentId, paymentStatus: found.paymentStatus || 'UNKNOWN' };
-                enrollmentDetailsMap.set(courseIdNum, details); // Cập nhật map
+                enrollmentDetailsMap.set(courseIdNum, details);
                 return details;
             }
             return null;
         }
 
-        // --- Hàm Helper: Lấy dữ liệu thô từ API /my-enrollments ---
         async function fetchMyEnrollmentsData() {
             if (!token || userRole !== 'STUDENT') return null;
             try {
-                const response = await fetch('http://localhost:8080/api/users/my-enrollments', {
+                const response = await fetch(`${API_BASE_URL}/users/my-enrollments`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    return data.result; // Trả về mảng enrollments
+                    return data.result;
                 }
             } catch (e) { console.error(e); }
             return null;
         }
-        /**
-         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
-         */
-        /**
-         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
-         * (PHIÊN BẢN HOÀN CHỈNH)
-         */
-        function setActiveMenuItem() {
-            // 1. Lấy tên file của trang hiện tại
-            const currentPage = window.location.pathname.split('/').pop();
 
-            // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
+        function setActiveMenuItem() {
+            const currentPage = window.location.pathname.split('/').pop();
             const pageToMenuId = {
                 'index.html': 'menu-browse',
                 'login.html': 'menu-login',
-
-                // Nhóm Student
                 'my_courses.html': 'menu-my-courses',
                 'course_learning.html': 'menu-my-courses',
-
-                // Nhóm Instructor
                 'instructor_dashboard.html': 'menu-instructor-dashboard',
                 'create_course.html': 'menu-instructor-dashboard',
                 'edit_course.html': 'menu-instructor-dashboard',
                 'manage_lessons.html': 'menu-instructor-dashboard',
-
-                // Nhóm Admin (ĐÃ BỔ SUNG)
                 'admin_dashboard.html': 'menu-dashboard',
-                // 'admin_users.html': 'menu-users', // (Bạn có thể thêm trang này sau)
             };
-
-            // 3. Tìm ID của mục menu cần active
-            const activeMenuId = pageToMenuId[currentPage] || 'menu-browse'; // Mặc định là 'Khóa Học'
-
-            // 4. Xóa class "active" khỏi TẤT CẢ các mục
+            const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
             document.querySelectorAll('.sidebar-nav li').forEach(li => {
                 li.classList.remove('active');
             });
-
-            // 5. Thêm class "active" cho ĐÚNG mục menu
             const activeMenuItem = document.getElementById(activeMenuId);
             if (activeMenuItem) {
                 activeMenuItem.classList.add('active');
             }
         }
 
-        // --- Hàm Helper: Tìm nút trên card bằng courseId ---
         function findCardButton(courseId) {
             if (courseId === null) return null;
-            // Tìm nút hành động chính
             return courseGrid.querySelector(`.enroll-action-btn[data-course-id="${courseId}"]`);
         }
 
-        // --- Hàm Helper: Cập nhật trạng thái của 1 nút ---
-        // --- Hàm Helper: Cập nhật trạng thái của 1 nút ---
         function updateCardButtonState(courseId, status) {
-            const buttonElement = findCardButton(courseId); // Tìm nút
-            if (!buttonElement) return; // Không tìm thấy nút thì thoát
+            const buttonElement = findCardButton(courseId);
+            if (!buttonElement) return;
 
-            // Lấy enrollmentId từ map (nếu có)
             const enrollmentId = enrollmentDetailsMap.get(parseInt(courseId))?.enrollmentId;
 
-            // Reset thuộc tính
             buttonElement.disabled = false;
             buttonElement.style.cssText = "";
-            let buttonClass = "card-button enroll-action-btn"; // Khai báo buttonClass
+            let buttonClass = "card-button enroll-action-btn";
             let buttonIcon = "fa-shopping-cart";
             let buttonText = "Đăng ký ngay";
             let dataAttributes = `data-course-id="${courseId}"`;
 
-
             if (status === 'SUCCESS' || status === 'COMPLETED') {
-                buttonClass = "card-button"; // Xóa class action
+                buttonClass = "card-button";
                 buttonIcon = "fa-check-circle";
                 buttonText = "Đã đăng ký";
                 buttonElement.disabled = true;
@@ -801,13 +754,13 @@
                 buttonIcon = "fa-redo";
                 buttonText = "Thanh toán lại";
                 if (enrollmentId) dataAttributes += ` data-enrollment-id="${enrollmentId}"`;
-            } else { // Not enrolled (null)
+            } else {
                 buttonClass += " primary enroll-now-btn";
             }
 
             buttonElement.className = buttonClass;
             buttonElement.innerHTML = `<i class="fas ${buttonIcon}"></i> ${buttonText}`;
-            // Cập nhật lại data attributes (quan trọng cho lần click sau)
+
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = `<button ${dataAttributes}></button>`;
             const attrs = tempDiv.firstChild.attributes;
@@ -818,7 +771,6 @@
             }
         }
 
-        // --- Hàm Helper: Lấy tên phương thức thanh toán ---
         function getPaymentMethodName(method) {
             const names = {
                 'momo': 'Ví MoMo',
@@ -828,13 +780,11 @@
             return names[method] || method;
         }
 
-        // --- Hàm Helper: Định dạng giá tiền ---
         function formatPrice(price) {
             if (price === null || price === undefined) return 'N/A';
             return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
         }
 
-        // --- Hàm Helper: Tạo màu ngẫu nhiên cho ảnh placeholder ---
         function getRandomColor() {
             const letters = '789ABCDEF';
             let color = '';
@@ -844,7 +794,6 @@
             return color;
         }
 
-        // --- Hàm Helper: Lấy màu cho huy hiệu giá ---
         function getPriceBadgeColor(price) {
             if(price === null || price === undefined) return 'bg-gray';
             if(price < 500000) return 'bg-green';
@@ -853,7 +802,6 @@
             return 'bg-red';
         }
 
-        // --- Hàm Helper: Đăng xuất ---
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('userRole');
@@ -862,24 +810,10 @@
             window.location.href = 'login.html';
         }
 
-        document.addEventListener('click', function (e) {
-            if (e.target && e.target.id === 'payment-confirm-btn') {
-                handleConfirmPayment();
-            }
-        });
-        // DÁN HÀM MỚI NÀY VÀO TẤT CẢ 7 FILE
-// (Thay thế hàm 'updateSidebarVisibility' cũ)
-
-        /**
-         * Hàm chuẩn hóa mới để cập nhật hiển thị sidebar
-         * dựa trên logic vai trò chính xác.
-         */
         function updateSidebarVisibility() {
-            // 1. Lấy thông tin đăng nhập từ localStorage
             const token = localStorage.getItem('token');
-            const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
+            const userRole = localStorage.getItem('userRole');
 
-            // 2. Lấy TẤT CẢ các mục menu bằng ID
             const menuBrowse = document.getElementById('menu-browse');
             const menuMyCourses = document.getElementById('menu-my-courses');
             const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
@@ -888,36 +822,25 @@
             const menuLogin = document.getElementById('menu-login');
             const menuLogout = document.getElementById('logout-button');
 
-            // 3. Ẩn tất cả các mục menu đặc thù trước
             if (menuMyCourses) menuMyCourses.style.display = 'none';
             if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
             if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
-            if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
+            if (menuAdminUsers) menuAdminUsers.style.display = 'none';
             if (menuLogin) menuLogin.style.display = 'none';
             if (menuLogout) menuLogout.style.display = 'none';
 
-            // 4. Luôn hiển thị 'Khóa học' (Browse)
             if (menuBrowse) menuBrowse.style.display = 'block';
 
-            // 5. Xử lý logic Đăng nhập / Đăng xuất
             if (token) {
-                // --- ĐÃ ĐĂNG NHẬP ---
                 if (menuLogout) menuLogout.style.display = 'block';
-
-                // 6. Xử lý hiển thị theo vai trò (Role)
                 if (userRole === 'STUDENT') {
                     if (menuMyCourses) menuMyCourses.style.display = 'block';
-
                 } else if (userRole === 'INSTRUCTOR') {
                     if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
-
                 } else if (userRole === 'ADMIN') {
                     if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
-                    // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
                 }
-
             } else {
-                // --- CHƯA ĐĂNG NHẬP ---
                 if (menuLogin) menuLogin.style.display = 'block';
             }
         }
@@ -925,6 +848,3 @@
 </script>
 </body>
 </html>
-
-
-

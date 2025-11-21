@@ -42,8 +42,8 @@
 
         /* ==== COURSE CARD (MY COURSES) ==== */
         .course-card { background: #FFFFFF; border-radius: 12px; border: 1px solid #E0E0E0; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; }
-        .card-image-container { position: relative; }
-        .card-image-container img { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .card-image-container { position: relative; height: 180px; background-color: #f0f0f0; }
+        .card-image-container img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .card-body { padding: 16px; flex-grow: 1; }
         .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1D2B4F; }
         .card-instructor { font-size: 0.9rem; color: #667085; margin-bottom: 15px; }
@@ -62,7 +62,7 @@
         #loading-indicator { text-align: center; font-size: 1.2em; color: #667085; padding: 40px; }
         #no-courses-message { text-align: center; font-size: 1.1em; color: #667085; padding: 40px; }
 
-        /* ==== PAYMENT MODAL (Copy từ index.html) ==== */
+        /* ==== PAYMENT MODAL ==== */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background-color: #FFFFFF; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; }
         .modal-close-button { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: #888; cursor: pointer; line-height: 1; }
@@ -94,8 +94,17 @@
         #payment-modal-error { display: none; text-align: center; margin-top: 15px; color: #DE350B; font-weight: 500;}
 
         /* Responsive */
-        @media (max-width: 992px) { /* (Giữ nguyên) */ }
-        @media (max-width: 768px) { /* (Giữ nguyên) */ }
+        @media (max-width: 992px) {
+            .sidebar { width: 200px; }
+            .main-content { margin-left: 200px; padding: 20px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .form-card { padding: 24px 20px; }
+            .form-actions { flex-direction: column-reverse; }
+            .btn { width: 100%; justify-content: center; }
+        }
     </style>
 </head>
 <body>
@@ -108,10 +117,10 @@
         <nav class="sidebar-nav">
             <ul>
                 <li class="admin-only" id="menu-dashboard">
-                    <a href="#"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a>
+                    <a href="admin_dashboard.html"><i class="fas fa-tachometer-alt"></i> <span>Dashboard Admin</span></a>
                 </li>
                 <li class="admin-only" id="menu-users">
-                    <a href="#"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
+                    <a href="admin_users.html"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
                 </li>
                 <li class="logged-in-only  active" id="menu-my-courses">
                     <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
@@ -127,7 +136,7 @@
                     <a href="login.html"><i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span></a>
                 </li>
                 <li class="logged-in-only" id="logout-button">
-                    <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a>
+                    <a href=""><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a>
                 </li>
             </ul>
         </nav>
@@ -151,6 +160,7 @@
     </main>
 </div>
 
+<!-- Payment Modal (Giữ nguyên logic) -->
 <div class="modal-overlay" id="payment-modal-overlay">
     <div class="modal-content">
         <button class="modal-close-button" id="payment-modal-close-btn">&times;</button>
@@ -202,7 +212,12 @@
     </div>
 </div>
 
+<script src="js/common.js"></script> <!-- Giả sử file common chứa các biến chung -->
 <script>
+    // Cấu hình URL máy chủ (Cần thiết để fix lỗi ảnh tương đối)
+    const SERVER_URL = 'http://localhost:8080';
+    const API_BASE_URL = `${SERVER_URL}/api`;
+
     document.addEventListener('DOMContentLoaded', () => {
         // --- DOM Elements ---
         const token = localStorage.getItem('token');
@@ -224,47 +239,45 @@
         // --- State ---
         let currentModalCourseId = null;
         let currentModalEnrollmentId = null;
-        let allMyEnrollments = []; // Lưu trữ toàn bộ data
+        let allMyEnrollments = [];
 
         // --- Initial Load ---
         checkLoginStatusAndRedirect();
         fetchMyCourses();
         setActiveMenuItem();
-        updateSidebarVisibility();
+
         // --- Event Handlers ---
         myCourseGrid.addEventListener('click', (event) => {
-            const targetButton = event.target.closest('button.action-button'); // Chỉ bắt sự kiện trên nút action
+            const targetButton = event.target.closest('button.action-button');
             if (targetButton) {
-                event.preventDefault(); // Ngăn thẻ <a> điều hướng ngay
+                event.preventDefault();
                 const courseId = targetButton.dataset.courseId;
                 const enrollmentId = targetButton.dataset.enrollmentId;
 
                 if (targetButton.classList.contains('pending-payment-btn') || targetButton.classList.contains('failed-payment-btn')) {
                     showPaymentModal(courseId, enrollmentId);
                 } else if (targetButton.classList.contains('learn-button-success')) {
-                    // Chỉ nút "Vào học" mới điều hướng
                     window.location.href = `course_learning.html?courseId=${courseId}`;
                 }
             } else {
-                // Cho phép click vào phần còn lại của thẻ (nếu là thẻ <a>)
                 const cardLink = event.target.closest('a.course-card');
                 if (cardLink && !cardLink.querySelector('.pending-payment-btn') && !cardLink.querySelector('.failed-payment-btn')) {
-                    // Chỉ điều hướng nếu thẻ không chứa nút chờ thanh toán
+                    // Link hoạt động bình thường
                 } else if (cardLink) {
-                    event.preventDefault(); // Ngăn điều hướng nếu là thẻ PENDING/FAILED
+                    event.preventDefault();
                     alert("Vui lòng hoàn tất thanh toán để vào học.");
                 }
             }
         });
 
-        // Payment Modal Handlers (Copy từ index.html)
+        // Payment Modal Handlers
+
         paymentModalCloseBtn.addEventListener('click', closePaymentModal);
         paymentLaterBtn.addEventListener('click', closePaymentModal);
         paymentConfirmBtn.addEventListener('click', handleConfirmPayment);
         paymentCancelBtn.addEventListener('click', handleCancelPayment);
         paymentModalOverlay.addEventListener('click', (event) => { if (event.target === paymentModalOverlay) closePaymentModal(); });
 
-        // Payment method selection (Copy từ index.html)
         document.querySelectorAll('.payment-method').forEach(method => {
             method.addEventListener('click', function() {
                 document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
@@ -273,108 +286,130 @@
             });
         });
 
-        /**
-         * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
-         */
+        // --- Helper Functions ---
         function setActiveMenuItem() {
-            // 1. Lấy tên file của trang hiện tại (ví dụ: "index.html", "my_courses.html")
             const currentPage = window.location.pathname.split('/').pop();
-
-            // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
             const pageToMenuId = {
                 'index.html': 'menu-browse',
                 'my_courses.html': 'menu-my-courses',
-                'course_learning.html': 'menu-my-courses', // 'Vào học' vẫn thuộc 'Khóa học của tôi'
+                'course_learning.html': 'menu-my-courses',
                 'instructor_dashboard.html': 'menu-instructor-dashboard',
-                'create_course.html': 'menu-instructor-dashboard', // 'Tạo khóa học' thuộc Bảng ĐK
-                'edit_course.html': 'menu-instructor-dashboard', // 'Sửa' thuộc Bảng ĐK
-                'manage_lessons.html': 'menu-instructor-dashboard', // 'Quản lý bài học' thuộc Bảng ĐK
+                'create_course.html': 'menu-instructor-dashboard',
+                'edit_course.html': 'menu-instructor-dashboard',
+                'manage_lessons.html': 'menu-instructor-dashboard',
                 'login.html': 'menu-login'
-                // Thêm các trang admin nếu cần
-                // 'admin_dashboard.html': 'menu-dashboard',
-                // 'admin_users.html': 'menu-users',
             };
-
-            // 3. Tìm ID của mục menu cần active (mặc định là 'menu-browse' nếu không tìm thấy)
             const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
-
-            // 4. Xóa class "active" khỏi TẤT CẢ các mục
-            document.querySelectorAll('.sidebar-nav li').forEach(li => {
-                li.classList.remove('active');
-            });
-
-            // 5. Thêm class "active" cho ĐÚNG mục menu
+            document.querySelectorAll('.sidebar-nav li').forEach(li => li.classList.remove('active'));
             const activeMenuItem = document.getElementById(activeMenuId);
-            if (activeMenuItem) {
-                activeMenuItem.classList.add('active');
+            if (activeMenuItem) activeMenuItem.classList.add('active');
+        }
+
+        function checkLoginStatusAndRedirect() {
+            if (!token) {
+                // Không có token thì không cần redirect ở đây, fetchMyCourses sẽ xử lý
+            }
+            if (typeof updateSidebarVisibility === 'function') updateSidebarVisibility();
+
+        }
+
+        function updateSidebarVisibility() {
+            // Hàm này nên được đưa vào common.js
+            const menuBrowse = document.getElementById('menu-browse');
+            const menuMyCourses = document.getElementById('menu-my-courses');
+            const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
+            const menuAdminDashboard = document.getElementById('menu-dashboard');
+            const menuLogin = document.getElementById('menu-login');
+            const menuLogout = document.getElementById('logout-button');
+            if(menuLogout) menuLogout.addEventListener('click', logout)
+            if (menuMyCourses) menuMyCourses.style.display = 'none';
+            if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
+            if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
+            if (menuLogin) menuLogin.style.display = 'none';
+            if (menuLogout) menuLogout.style.display = 'none';
+            if (menuBrowse) menuBrowse.style.display = 'block';
+
+            if (token) {
+                if (menuLogout) menuLogout.style.display = 'block';
+                if (userRole === 'STUDENT' && menuMyCourses) menuMyCourses.style.display = 'block';
+                else if (userRole === 'INSTRUCTOR' && menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
+                else if (userRole === 'ADMIN' && menuAdminDashboard) menuAdminDashboard.style.display = 'block';
+            } else {
+                if (menuLogin) menuLogin.style.display = 'block';
             }
         }
-        // --- Functions ---
-        function checkLoginStatusAndRedirect() { /* (Giữ nguyên như file bạn đã gửi) */ }
 
+        // --- CORE: FETCH COURSES ---
         async function fetchMyCourses() {
             loadingIndicator.style.display = 'block';
             noCoursesMessage.style.display = 'none';
             myCourseGrid.innerHTML = '';
-            const token = localStorage.getItem('token');
+
             if (!token) {
                 loadingIndicator.style.display = 'none';
-                myCourseGrid.innerHTML = '<p>Không tìm thấy token. Vui lòng đăng nhập.</p>';
-                // redirect to login page
-                setTimeout(() => window.location.href = 'login.html', 800);
+                myCourseGrid.innerHTML = '<p>Vui lòng đăng nhập để xem khóa học.</p>';
+                setTimeout(() => window.location.href = 'login.html', 1000);
                 return;
             }
 
             try {
-                const response = await fetch('http://localhost:8080/api/users/my-enrollments', {
+                const response = await fetch(`${API_BASE_URL}/users/my-enrollments`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Content-Type': 'application/json'
                     }
                 });
 
                 loadingIndicator.style.display = 'none';
 
                 if (response.status === 401) {
-                    // Unauthorized: token hết hạn / không hợp lệ
-                    console.warn('401 Unauthorized - clearing token and redirecting to login');
                     localStorage.removeItem('token');
-                    alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    alert('Phiên đăng nhập đã hết hạn.');
                     window.location.href = 'login.html';
                     return;
                 }
-                if (response.status === 403) {
-                    // Forbidden: không có quyền
-                    console.warn('403 Forbidden - user lacks permission');
-                    alert('Bạn không có quyền xem trang này.');
-                    return;
-                }
+
                 if (!response.ok) {
-                    console.error('Failed to fetch my courses:', response.status);
-                    const errText = await response.text().catch(()=>null);
-                    myCourseGrid.innerHTML = `<p>Không thể tải khóa học của bạn. (Mã: ${response.status})</p>`;
-                    console.debug('Error body:', errText);
+                    myCourseGrid.innerHTML = `<p>Không thể tải khóa học. (Lỗi: ${response.status})</p>`;
                     return;
                 }
 
                 const data = await response.json();
                 if (data.result && data.result.length > 0) {
-                    allMyEnrollments = data.result; // Lưu lại dữ liệu
+                    allMyEnrollments = data.result;
                     displayMyCourses(allMyEnrollments);
                 } else {
                     noCoursesMessage.style.display = 'block';
                 }
             } catch (error) {
                 loadingIndicator.style.display = 'none';
-                console.error('Error fetching my courses:', error);
-                myCourseGrid.innerHTML = '<p>Đã xảy ra lỗi khi kết nối tới máy chủ.</p>';
+                console.error('Lỗi fetch khóa học:', error);
+                myCourseGrid.innerHTML = '<p>Lỗi kết nối đến máy chủ.</p>';
             }
         }
 
+        /**
+         * Hàm xử lý URL ảnh: Nếu URL là tương đối (vd: /uploads/a.jpg), thêm domain server vào trước.
+         */
+        function resolveImageUrl(url) {
+            if (!url) return null;
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            // Nếu URL bắt đầu bằng /, nối với SERVER_URL
+            // Nếu không, cũng nối (tuỳ cấu hình server của bạn)
+            return `${SERVER_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+        }
 
-        // --- CẬP NHẬT: displayMyCourses ---
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userFullName');
+            alert('Bạn đã đăng xuất.');
+            window.location.href = 'login.html';
+        }
+
         function displayMyCourses(enrollments) {
             myCourseGrid.innerHTML = '';
             if (!enrollments || enrollments.length === 0) {
@@ -384,48 +419,50 @@
             enrollments.forEach(enrollment => {
                 const courseId = enrollment.courseId;
                 const title = enrollment.courseTitle || enrollment.courseName || 'Không có tiêu đề';
-                const instructorName = enrollment.instructorName || 'Không rõ giảng viên';
-                const imageUrl = enrollment.imageUrl || `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=Course`;
+                const instructorName = enrollment.instructorName || 'Giảng viên';
+
+                // --- SỬA LỖI HÌNH ẢNH Ở ĐÂY ---
+                // 1. Xử lý URL đầy đủ
+                const imageUrl = resolveImageUrl(enrollment.imageUrl) || `https://via.placeholder.com/350x180/${getRandomColor()}/FFFFFF?text=${encodeURIComponent(title)}`;
+
                 const progress = enrollment.progress !== null && enrollment.progress !== undefined ? enrollment.progress : 0;
                 const paymentStatus = enrollment.paymentStatus || 'UNKNOWN';
                 const enrollmentId = enrollment.enrollmentId;
 
                 let actionButtonHTML = '';
-                let cardTag = 'div'; // Mặc định là div
-                let cardHref = ''; // Mặc định không có link
+                let cardTag = 'div';
+                let cardHref = '';
 
-                if (paymentStatus === 'COMPLETED') {
-                    // Đã thanh toán: Thẻ là 1 link, nút là "Vào học"
+                // --- SỬA LỖI TRẠNG THÁI THANH TOÁN (SUCCESS thay vì COMPLETED) ---
+                if (paymentStatus === 'SUCCESS' || paymentStatus === 'COMPLETED') { // Hỗ trợ cả 2
                     cardTag = 'a';
                     cardHref = `href="course_learning.html?courseId=${courseId}"`;
                     actionButtonHTML = `<button class="action-button learn-button-success" data-course-id="${courseId}">
                                             <i class="fas fa-play-circle"></i> Vào học
                                         </button>`;
                 } else if (paymentStatus === 'PENDING') {
-                    // Chờ thanh toán: Thẻ không phải link, nút là "Hoàn tất thanh toán"
                     actionButtonHTML = `<button class="action-button pending pending-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
                                             <i class="fas fa-credit-card"></i> Hoàn tất thanh toán
                                         </button>`;
                 } else if (paymentStatus === 'FAILED') {
-                    // Thanh toán lỗi: Thẻ không phải link, nút là "Thanh toán lại"
                     actionButtonHTML = `<button class="action-button failed failed-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
                                             <i class="fas fa-redo"></i> Thanh toán lại
                                         </button>`;
                 } else {
-                    // Trạng thái không xác định: Coi như PENDING
                     actionButtonHTML = `<button class="action-button pending pending-payment-btn" data-course-id="${courseId}" data-enrollment-id="${enrollmentId}">
-                                            <i class="fas fa-clock"></i> Chờ thanh toán
+                                            <i class="fas fa-clock"></i> ${paymentStatus}
                                         </button>`;
                 }
 
                 const courseCardHTML = `
                     <${cardTag} ${cardHref} class="course-card">
                         <div class="card-image-container">
-                            <img src="${imageUrl}" alt="${title}">
+                            <!-- Thêm onerror để xử lý nếu ảnh bị lỗi 404 -->
+                            <img src="${imageUrl}" alt="${title}" onerror="this.onerror=null; this.src='https://via.placeholder.com/350x180/e0e0e0/333333?text=Image+Error';">
                         </div>
                         <div class="card-body">
                             <h3 class="card-title" title="${title}">${title}</h3>
-                            <p class="card-instructor">Giảng viên: ${instructorName}</p>
+                            <p class="card-instructor"><i class="fas fa-chalkboard-teacher"></i> ${instructorName}</p>
                             <div class="progress-bar-container" title="Tiến độ: ${progress.toFixed(0)}%">
                                 <div class="progress-bar" style="width: ${progress}%;"></div>
                             </div>
@@ -439,10 +476,8 @@
             });
         }
 
-        // --- CÁC HÀM CỦA MODAL THANH TOÁN (Copy từ index.html) ---
-
+        // --- MODAL FUNCTIONS ---
         async function showPaymentModal(courseId, enrollmentId) {
-            console.log(`Showing payment modal for course ${courseId}, enrollment ${enrollmentId}`);
             currentModalCourseId = parseInt(courseId);
             currentModalEnrollmentId = parseInt(enrollmentId);
 
@@ -451,31 +486,20 @@
             paymentConfirmBtn.disabled = false;
             paymentCancelBtn.disabled = false;
             paymentLaterBtn.disabled = false;
-            // Reset payment method
-            const defaultMethod = document.querySelector('.payment-method input[value="momo"]');
-            if(defaultMethod) defaultMethod.checked = true;
-            document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
-            if(defaultMethod) defaultMethod.closest('.payment-method').classList.add('selected');
-
             paymentModalOverlay.style.display = 'flex';
 
-            // Lấy thông tin khóa học từ mảng đã lưu
             const enrollment = allMyEnrollments.find(e => e.enrollmentId == enrollmentId);
             if (enrollment) {
                 document.getElementById('payment-course-title').textContent = enrollment.courseName || 'N/A';
                 document.getElementById('payment-course-instructor').textContent = enrollment.instructorName || 'N/A';
-                // Cần fetch giá từ API public/courses nếu API /my-enrollments không trả về giá
-                document.getElementById('payment-course-price').textContent = "Đang tải giá..."; // Tạm
-                fetchCoursePrice(courseId); // Gọi hàm riêng để lấy giá
-            } else {
-                paymentError.textContent = 'Lỗi tải thông tin khóa học.';
-                paymentError.style.display = 'block';
+                document.getElementById('payment-course-price').textContent = "Đang tải giá...";
+                fetchCoursePrice(courseId);
             }
         }
 
         async function fetchCoursePrice(courseId) {
             try {
-                const response = await fetch(`http://localhost:8080/api/public/courses/${courseId}`);
+                const response = await fetch(`${API_BASE_URL}/public/courses/${courseId}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.result) {
@@ -489,120 +513,62 @@
             paymentModalOverlay.style.display = 'none';
             currentModalCourseId = null;
             currentModalEnrollmentId = null;
-            // Không cần updateCardButtonState vì fetchMyCourses sẽ được gọi lại
         }
 
         async function handleConfirmPayment() {
             const enrollmentId = currentModalEnrollmentId;
-            const courseId = currentModalCourseId;
-            if (enrollmentId === null || courseId === null) return;
+            if (!enrollmentId) return;
             const selectedMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'N/A';
 
             paymentLoading.style.display = 'block'; paymentError.style.display = 'none';
             paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:8080/api/payments/simulate-success/${enrollmentId}`, {
+                const response = await fetch(`${API_BASE_URL}/payments/simulate-success/${enrollmentId}`, {
                     method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(`Payment failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
+                    const data = await response.json();
+                    throw new Error(data.message || 'Lỗi thanh toán');
                 }
 
-                console.log('Payment simulation successful.');
                 alert(`Thanh toán thành công qua ${getPaymentMethodName(selectedMethod)}!`);
                 closePaymentModal();
-                fetchMyCourses(); // Tải lại danh sách khóa học
+                fetchMyCourses();
 
             } catch (error) {
-                console.error('Error confirming payment:', error);
                 paymentLoading.style.display = 'none';
-                paymentError.textContent = `Lỗi thanh toán: ${error.message}`;
+                paymentError.textContent = `Lỗi: ${error.message}`;
                 paymentError.style.display = 'block';
                 paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
-                // Cần cập nhật trạng thái FAILED nếu có
-                fetchMyCourses(); // Tải lại để cập nhật trạng thái FAILED
+                fetchMyCourses();
             }
         }
 
         async function handleCancelPayment() {
             const enrollmentId = currentModalEnrollmentId;
-            if (enrollmentId === null) return;
-
+            if (!enrollmentId) return;
             if (!confirm("Bạn có chắc chắn muốn hủy lượt đăng ký này không?")) return;
 
             paymentLoading.style.display = 'block'; paymentError.style.display = 'none';
-            paymentConfirmBtn.disabled = true; paymentCancelBtn.disabled = true; paymentLaterBtn.disabled = true;
+            paymentConfirmBtn.disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:8080/api/enrollments/${enrollmentId}`, {
+                const response = await fetch(`${API_BASE_URL}/enrollments/${enrollmentId}`, {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(`Cancel failed (${response.status}): ${data.message || 'Lỗi không xác định'}`);
-                }
-                console.log("Enrollment cancelled on backend.");
+                if (!response.ok) throw new Error('Lỗi khi hủy');
 
                 alert("Đã hủy lượt đăng ký.");
                 closePaymentModal();
-                fetchMyCourses(); // Tải lại danh sách khóa học
+                fetchMyCourses();
 
             } catch (error) {
-                console.error('Error cancelling enrollment:', error);
                 paymentLoading.style.display = 'none';
-                paymentError.textContent = `Lỗi hủy đăng ký: ${error.message}`;
+                paymentError.textContent = `Lỗi: ${error.message}`;
                 paymentError.style.display = 'block';
-                paymentConfirmBtn.disabled = false; paymentCancelBtn.disabled = false; paymentLaterBtn.disabled = false;
-            }
-        }
-        function updateSidebarVisibility() {
-            // 1. Lấy thông tin đăng nhập từ localStorage
-            const token = localStorage.getItem('token');
-            const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
-
-            // 2. Lấy TẤT CẢ các mục menu bằng ID
-            const menuBrowse = document.getElementById('menu-browse');
-            const menuMyCourses = document.getElementById('menu-my-courses');
-            const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
-            const menuAdminDashboard = document.getElementById('menu-dashboard');
-            const menuAdminUsers = document.getElementById('menu-users');
-            const menuLogin = document.getElementById('menu-login');
-            const menuLogout = document.getElementById('logout-button');
-
-            // 3. Ẩn tất cả các mục menu đặc thù trước
-            if (menuMyCourses) menuMyCourses.style.display = 'none';
-            if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
-            if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
-            if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
-            if (menuLogin) menuLogin.style.display = 'none';
-            if (menuLogout) menuLogout.style.display = 'none';
-
-            // 4. Luôn hiển thị 'Khóa học' (Browse)
-            if (menuBrowse) menuBrowse.style.display = 'block';
-
-            // 5. Xử lý logic Đăng nhập / Đăng xuất
-            if (token) {
-                // --- ĐÃ ĐĂNG NHẬP ---
-                if (menuLogout) menuLogout.style.display = 'block';
-
-                // 6. Xử lý hiển thị theo vai trò (Role)
-                if (userRole === 'STUDENT') {
-                    if (menuMyCourses) menuMyCourses.style.display = 'block';
-
-                } else if (userRole === 'INSTRUCTOR') {
-                    if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
-
-                } else if (userRole === 'ADMIN') {
-                    if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
-                    // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
-                }
-
-            } else {
-                // --- CHƯA ĐĂNG NHẬP ---
-                if (menuLogin) menuLogin.style.display = 'block';
+                paymentConfirmBtn.disabled = false;
             }
         }
 
@@ -616,10 +582,21 @@
             return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
         }
 
-        function getRandomColor() { /* (Giữ nguyên) */ }
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '';
+            for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
+            return color;
+        }
 
-        function logout() { /* (Giữ nguyên) */ }
-
+        function handleLogout() {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userFullName');
+                window.location.href = 'index.html';
+            }
+        }
     });
 </script>
 

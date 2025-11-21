@@ -51,6 +51,18 @@
         .form-input.error, .form-textarea.error, .form-select.error { border-color: #DE350B; }
         .error-message { color: #DE350B; font-size: 0.85rem; margin-top: 6px; display: none; }
 
+        /* Image Preview Styling */
+        #imagePreview {
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+            margin-top: 12px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+            display: none;
+            object-fit: cover;
+        }
+
         /* ==== RICH TEXT EDITOR WRAPPER ==== */
         .editor-wrapper { border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; transition: all 0.2s; }
         .editor-wrapper:focus-within { border-color: #0052CC; box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1); }
@@ -100,9 +112,7 @@
                 <li id="menu-dashboard">
                     <a href="admin_dashboard.html"><i class="fas fa-tachometer-alt"></i> <span>Dashboard Admin</span></a>
                 </li>
-                <li id="menu-users">
-                    <a href="admin_users.html"><i class="fas fa-users"></i> <span>Người Dùng</span></a>
-                </li>
+
 
                 <li id="menu-my-courses">
                     <a href="my_courses.html"><i class="fas fa-book-open"></i> <span>Khóa Học Của Tôi</span></a>
@@ -152,6 +162,7 @@
                         <span class="error-message" id="title-error">Vui lòng nhập tiêu đề khóa học</span>
                     </div>
 
+                    <!-- Lưu ý: Code mẫu chỉ có description, nên ở đây ta vẫn giữ shortDescription nhưng có thể API sẽ không dùng đến hoặc cần map lại -->
                     <div class="form-group">
                         <label for="shortDescription" class="form-label">
                             Mô tả ngắn <span class="required">*</span>
@@ -162,21 +173,21 @@
                                 name="shortDescription"
                                 rows="4"
                                 required
-                                placeholder="Tóm tắt ngắn gọn về khóa học (hiển thị trên thẻ khóa học)"
+                                placeholder="Tóm tắt ngắn gọn về khóa học"
                         ></textarea>
                         <span class="error-message" id="short-desc-error">Vui lòng nhập mô tả ngắn</span>
                     </div>
 
                     <div class="form-group">
                         <label for="longDescription" class="form-label">
-                            Mô tả chi tiết
+                            Mô tả chi tiết (Nội dung khóa học)
                         </label>
                         <div class="editor-wrapper">
                             <textarea
                                     class="form-textarea"
                                     id="longDescription"
                                     name="longDescription"
-                                    placeholder="Mô tả chi tiết về nội dung, mục tiêu, đối tượng của khóa học"
+                                    placeholder="Mô tả chi tiết về nội dung..."
                             ></textarea>
                         </div>
                         <span class="form-helper">Sử dụng định dạng rich text để tạo nội dung hấp dẫn</span>
@@ -199,18 +210,14 @@
                         <span class="error-message" id="price-error">Vui lòng nhập giá hợp lệ</span>
                     </div>
 
+                    <!-- Thay thế URL bằng Input File để giống code mẫu -->
                     <div class="form-group">
-                        <label for="thumbnailUrl" class="form-label">
-                            URL ảnh đại diện
+                        <label for="imageFile" class="form-label">
+                            Tải lên Hình ảnh <span class="required">*</span>
                         </label>
-                        <input
-                                type="url"
-                                class="form-input"
-                                id="thumbnailUrl"
-                                name="thumbnailUrl"
-                                placeholder="https://example.com/course-thumbnail.jpg"
-                        >
-                        <span class="form-helper">Bạn có thể dùng một URL ảnh có sẵn hoặc bỏ trống</span>
+                        <input type="file" class="form-input" id="imageFile" accept="image/*" required>
+                        <span class="form-helper">Chọn ảnh bìa cho khóa học (JPG, PNG...)</span>
+                        <img id="imagePreview" src="" alt="Image Preview">
                     </div>
 
                     <div class="form-group">
@@ -240,13 +247,19 @@
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-content">
         <div class="loading-spinner"><i class="fas fa-spinner"></i></div>
-        <div class="loading-text">Đang tạo khóa học, vui lòng đợi...</div>
+        <div class="loading-text">Đang tải dữ liệu...</div>
     </div>
 </div>
 
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script src="js/common.js"></script> <!-- Giả sử common.js chứa các biến toàn cục nếu có -->
+
 <script>
-    const API_BASE_URL = 'http://localhost:8080/api';
+    // Đảm bảo API_BASE_URL được định nghĩa (hoặc lấy từ common.js)
+    if (typeof API_BASE_URL === 'undefined') {
+        var API_BASE_URL = 'http://localhost:8080/api';
+    }
+
     const createCourseForm = document.getElementById('create-course-form');
     const createCourseBtn = document.getElementById('createCourseBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
@@ -283,95 +296,39 @@
             window.location.href = 'login.html';
             return;
         }
-        updateSidebarVisibility();
+        if (typeof updateSidebarVisibility === 'function') {
+            updateSidebarVisibility();
+        }
     }
 
-    // DÁN HÀM MỚI NÀY VÀO TẤT CẢ 7 FILE
-    // (Thay thế hàm 'updateSidebarVisibility' cũ)
-
-    /**
-     * Hàm chuẩn hóa mới để cập nhật hiển thị sidebar
-     * dựa trên logic vai trò chính xác.
-     */
+    // Nếu chưa có hàm updateSidebarVisibility (do file common.js chưa load hoặc chưa có), ta định nghĩa tạm ở đây để tránh lỗi
     function updateSidebarVisibility() {
-        // 1. Lấy thông tin đăng nhập từ localStorage
-        const token = localStorage.getItem('token');
-        const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
-
-        // 2. Lấy TẤT CẢ các mục menu bằng ID
         const menuBrowse = document.getElementById('menu-browse');
         const menuMyCourses = document.getElementById('menu-my-courses');
         const menuInstructorDashboard = document.getElementById('menu-instructor-dashboard');
         const menuAdminDashboard = document.getElementById('menu-dashboard');
-        const menuAdminUsers = document.getElementById('menu-users');
         const menuLogin = document.getElementById('menu-login');
         const menuLogout = document.getElementById('logout-button');
 
-        // 3. Ẩn tất cả các mục menu đặc thù trước
         if (menuMyCourses) menuMyCourses.style.display = 'none';
         if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
         if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
-        if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
         if (menuLogin) menuLogin.style.display = 'none';
         if (menuLogout) menuLogout.style.display = 'none';
-
-        // 4. Luôn hiển thị 'Khóa học' (Browse)
         if (menuBrowse) menuBrowse.style.display = 'block';
 
-        // 5. Xử lý logic Đăng nhập / Đăng xuất
         if (token) {
-            // --- ĐÃ ĐĂNG NHẬP ---
             if (menuLogout) menuLogout.style.display = 'block';
-
-            // 6. Xử lý hiển thị theo vai trò (Role)
-            if (userRole === 'STUDENT') {
-                if (menuMyCourses) menuMyCourses.style.display = 'block';
-
-            } else if (userRole === 'INSTRUCTOR') {
-                if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
-
-            } else if (userRole === 'ADMIN') {
-                if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
-                // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
-            }
-
+            if (currentUserRole === 'STUDENT' && menuMyCourses) menuMyCourses.style.display = 'block';
+            else if (currentUserRole === 'INSTRUCTOR' && menuInstructorDashboard) menuInstructorDashboard.style.display = 'block';
+            else if (currentUserRole === 'ADMIN' && menuAdminDashboard) menuAdminDashboard.style.display = 'block';
         } else {
-            // --- CHƯA ĐĂNG NHẬP ---
             if (menuLogin) menuLogin.style.display = 'block';
         }
     }
-    /**
-     * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
-     */
+
     function setActiveMenuItem() {
-        // 1. Lấy tên file của trang hiện tại (ví dụ: "index.html", "my_courses.html")
-        const currentPage = window.location.pathname.split('/').pop();
-
-        // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
-        const pageToMenuId = {
-            'index.html': 'menu-browse',
-            'my_courses.html': 'menu-my-courses',
-            'course_learning.html': 'menu-my-courses', // 'Vào học' vẫn thuộc 'Khóa học của tôi'
-            'instructor_dashboard.html': 'menu-instructor-dashboard',
-            'create_course.html': 'menu-instructor-dashboard', // 'Tạo khóa học' thuộc Bảng ĐK
-            'edit_course.html': 'menu-instructor-dashboard', // 'Sửa' thuộc Bảng ĐK
-            'manage_lessons.html': 'menu-instructor-dashboard', // 'Quản lý bài học' thuộc Bảng ĐK
-            'login.html': 'menu-login'
-            // Thêm các trang admin nếu cần
-            // 'admin_dashboard.html': 'menu-dashboard',
-            // 'admin_users.html': 'menu-users',
-        };
-
-        // 3. Tìm ID của mục menu cần active (mặc định là 'menu-browse' nếu không tìm thấy)
-        const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
-
-        // 4. Xóa class "active" khỏi TẤT CẢ các mục
-        document.querySelectorAll('.sidebar-nav li').forEach(li => {
-            li.classList.remove('active');
-        });
-
-        // 5. Thêm class "active" cho ĐÚNG mục menu
-        const activeMenuItem = document.getElementById(activeMenuId);
+        const activeMenuItem = document.getElementById('menu-instructor-dashboard');
         if (activeMenuItem) {
             activeMenuItem.classList.add('active');
         }
@@ -402,27 +359,18 @@
                         categoryIdSelect.appendChild(option);
                     });
                 }
-            } else {
-                console.error('Failed to fetch categories:', await response.text());
             }
         } catch (error) {
             console.error('Error fetching categories:', error);
         }
     }
 
-    // Form validation
+    // Form validation basic
     function validateForm() {
         let isValid = true;
+        document.querySelectorAll('.form-input, .form-textarea, .form-select').forEach(el => el.classList.remove('error'));
+        document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
 
-        // Reset errors
-        document.querySelectorAll('.form-input, .form-textarea, .form-select').forEach(el => {
-            el.classList.remove('error');
-        });
-        document.querySelectorAll('.error-message').forEach(el => {
-            el.style.display = 'none';
-        });
-
-        // Validate title
         const title = document.getElementById('courseTitle');
         if (!title.value.trim()) {
             title.classList.add('error');
@@ -430,15 +378,6 @@
             isValid = false;
         }
 
-        // Validate short description
-        const shortDesc = document.getElementById('shortDescription');
-        if (!shortDesc.value.trim()) {
-            shortDesc.classList.add('error');
-            document.getElementById('short-desc-error').style.display = 'block';
-            isValid = false;
-        }
-
-        // Validate price
         const price = document.getElementById('price');
         if (!price.value || parseFloat(price.value) < 0) {
             price.classList.add('error');
@@ -446,10 +385,18 @@
             isValid = false;
         }
 
+        // Kiểm tra file
+        const imageFile = document.getElementById('imageFile').files[0];
+        if(!imageFile) {
+            // Có thể thêm thông báo lỗi cho ảnh nếu cần
+            isValid = false;
+            alert("Vui lòng chọn ảnh khóa học");
+        }
+
         return isValid;
     }
 
-    // Handle form submission
+    // --- LOGIC SUBMIT FORM (ĐÃ CHỈNH SỬA ĐỂ GIỐNG FILE MẪU) ---
     createCourseForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
@@ -457,44 +404,48 @@
             return;
         }
 
-        if (!token) {
-            alert('Bạn cần đăng nhập để tạo khóa học.');
-            window.location.href = 'login.html';
-            return;
-        }
-
         loadingOverlay.style.display = 'flex';
         createCourseBtn.disabled = true;
 
-        const courseData = {
-            title: document.getElementById('courseTitle').value.trim(),
-            shortDescription: document.getElementById('shortDescription').value.trim(),
-            longDescription: editor.getData(),
-            price: parseFloat(document.getElementById('price').value),
-            thumbnailUrl: document.getElementById('thumbnailUrl').value.trim(),
-            categoryId: document.getElementById('categoryId').value ? parseInt(document.getElementById('categoryId').value) : null
-        };
+        // 1. Lấy dữ liệu từ Form
+        const title = document.getElementById('courseTitle').value.trim();
+        // Lấy nội dung từ CKEditor gán vào biến description để khớp với code mẫu
+        const description = editor.getData();
+        // Code mẫu chỉ dùng description, nhưng nếu backend cần shortDescription thì lấy thêm:
+        // const shortDescription = document.getElementById('shortDescription').value.trim();
+        const price = document.getElementById('price').value;
+        const imageFile = document.getElementById('imageFile').files[0];
+        const categoryId = document.getElementById('categoryId').value;
 
-        // Remove empty fields
-        if (!courseData.thumbnailUrl) delete courseData.thumbnailUrl;
-        if (!courseData.categoryId) delete courseData.categoryId;
+        // 2. Tạo đối tượng FormData
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description); // Map CKEditor data vào 'description'
+        formData.append('price', price);
+
+        // Nếu bạn muốn gửi cả shortDescription và categoryId (nếu Backend hỗ trợ) thì uncomment:
+        // formData.append('shortDescription', document.getElementById('shortDescription').value.trim());
+        // if(categoryId) formData.append('categoryId', categoryId);
+
+        if (imageFile) {
+            formData.append('imageFile', imageFile);
+        }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/instructor/courses`, {
+            // 3. Gửi request với FormData (KHÔNG set Content-Type thủ công)
+            const response = await fetch(`${API_BASE_URL}/instructor/courses/`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
+                    // 'Content-Type': 'multipart/form-data' <--- KHÔNG DÙNG DÒNG NÀY
                 },
-                body: JSON.stringify(courseData)
+                body: formData
             });
 
             if (response.ok) {
-                alert('Khóa học đã được tạo thành công!');
+                const apiResponse = await response.json();
+                alert(apiResponse.message || 'Khóa học đã được tạo thành công!');
                 window.location.href = 'instructor_dashboard.html';
-            } else if (response.status === 401 || response.status === 403) {
-                alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
-                handleLogout();
             } else {
                 const errorData = await response.json();
                 alert(`Tạo khóa học thất bại: ${errorData.message || 'Lỗi không xác định'}`);
@@ -508,12 +459,31 @@
         }
     });
 
-
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
         checkLoginStatusAndRedirect();
         fetchCategories();
         setActiveMenuItem();
+
+        // --- Image Preview Logic (Code mới thêm từ mẫu) ---
+        const imageFileInput = document.getElementById('imageFile');
+        const imagePreview = document.getElementById('imagePreview');
+
+        imageFileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.src = '';
+                imagePreview.style.display = 'none';
+            }
+        });
+
         if (logoutButton) {
             logoutButton.addEventListener('click', (e) => {
                 e.preventDefault();

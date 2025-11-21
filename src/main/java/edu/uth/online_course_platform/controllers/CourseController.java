@@ -13,6 +13,7 @@ import edu.uth.online_course_platform.services.LessonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor; // Thêm import này nếu chưa có
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,10 +30,13 @@ public class CourseController {
     private final LessonService lessonService; // Inject LessonService
 
     // Create new Course:
-    @PostMapping("/")
-    public ResponseEntity<ApiResponse<CourseResponse>> createNewCourse(@Valid @RequestBody CreateCourseRequest createCourseRequest) {
+    @PostMapping(value = "/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<CourseResponse>> createNewCourse(
+            @Valid @ModelAttribute CreateCourseRequest createCourseRequest) { // Sử dụng @ModelAttribute
+
+        // Gọi service (sẽ cần throws Exception hoặc xử lý try-catch)
         CourseResponse newCourse = courseService.createNewCourse(createCourseRequest);
-        return new ResponseEntity<>(new ApiResponse<>(201, "Khóa học được tạo thành công", newCourse), HttpStatus.CREATED); // HTTP 201 Created
+        return new ResponseEntity<>(new ApiResponse<>(201, "Khóa học được tạo thành công", newCourse), HttpStatus.CREATED);
     }
 
     // Get all courses of current instructor:
@@ -49,14 +53,22 @@ public class CourseController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Lấy chi tiết khóa học thành công", courseDetails));
     }
 
-    // Update instructor's course by ID - Nghiệp vụ đã có
-    @PutMapping("/{courseId}")
+    @PutMapping(value = "/{courseId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(
             @PathVariable Long courseId,
-            @Valid @RequestBody UpdateCourseRequest request) {
+            @ModelAttribute UpdateCourseRequest request) {
+
         CourseResponse updatedCourse = courseService.updateCourse(courseId, request);
-        return ResponseEntity.ok(new ApiResponse<>(200, "Cập nhật khóa học thành công, đã chuyển về trạng thái Draft.", updatedCourse));
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        200,
+                        "Cập nhật khóa học thành công, đã chuyển về trạng thái Draft.",
+                        updatedCourse
+                )
+        );
     }
+
 
     // Submit course for approval - Nghiệp vụ đã có
     @PostMapping("/{courseId}/submit")

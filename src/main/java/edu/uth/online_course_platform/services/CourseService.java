@@ -34,7 +34,7 @@ public class CourseService {
     private final LessonService lessonService; // Inject LessonService
     private final AuthorizationService authorizationService;
     private final Mapper mapper;
-
+    private final FileStorageService fileStorageService;
     // Create new Course
     @Transactional
     public CourseResponse createNewCourse(CreateCourseRequest createCourseRequest) {
@@ -44,8 +44,12 @@ public class CourseService {
         course.setTitle(createCourseRequest.getTitle());
         course.setDescription(createCourseRequest.getDescription());
         course.setPrice(createCourseRequest.getPrice());
-        course.setImageUrl(createCourseRequest.getImageUrl());
-        course.setStatus(Course.CourseStatus.DRAFT); // Khóa học mới tạo luôn ở trạng thái DRAFT
+
+        // THAY ĐỔI Ở ĐÂY: Sử dụng fileStorageService để lưu file và lấy đường dẫn
+        String imageUrl = fileStorageService.storeFile(createCourseRequest.getImageFile());
+        course.setImageUrl(imageUrl);
+
+        course.setStatus(Course.CourseStatus.DRAFT);
         return mapper.transformCourseToCourseResponse(courseRepository.save(course));
     }
 
@@ -124,22 +128,45 @@ public class CourseService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+        boolean isUpdated = false;
+
+        // Cập nhật tiêu đề
+        if (request.getTitle() != null && !request.getTitle().isBlank()
+                && !request.getTitle().equals(course.getTitle())) {
             course.setTitle(request.getTitle());
+            isUpdated = true;
         }
-        if (request.getDescription() != null) {
+
+        // Cập nhật mô tả
+        if (request.getDescription() != null
+                && !request.getDescription().equals(course.getDescription())) {
             course.setDescription(request.getDescription());
+            isUpdated = true;
         }
-        if (request.getPrice() != null) {
+
+        // Cập nhật giá
+        if (request.getPrice() != null
+                && !request.getPrice().equals(course.getPrice())) {
             course.setPrice(request.getPrice());
+            isUpdated = true;
         }
-        if (request.getImageUrl() != null) {
-            course.setImageUrl(request.getImageUrl());
+
+        // === CẬP NHẬT HÌNH ẢNH GIỐNG CREATE NEW COURSE ===
+        if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
+            String newImageUrl = fileStorageService.storeFile(request.getImageFile());
+            course.setImageUrl(newImageUrl);
+            isUpdated = true;
+        }
+
+        // Nếu có thay đổi → quay về DRAFT
+        if (isUpdated) {
+            course.setStatus(Course.CourseStatus.DRAFT);
         }
 
         Course updatedCourse = courseRepository.save(course);
         return mapper.transformCourseToCourseResponse(updatedCourse);
     }
+
 
     // Submit course for approval - Nghiệp vụ đã có
     @Transactional
