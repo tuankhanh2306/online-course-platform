@@ -78,8 +78,8 @@
         .btn-action.lessons:hover { background-color: #E0E0E0; }
         .btn-action.submit { background-color: #FFF4E5; color: #B76E00; }
         .btn-action.submit:hover { background-color: #FFE8CC; }
-        .btn-action.students { background-color: #F0F2F5; color: #667085; }
-        .btn-action.students:hover { background-color: #E0E0E0; }
+        .btn-action.students { background-color: #E6F4EA; color: #137333; } /* Đổi màu nút học viên cho nổi bật */
+        .btn-action.students:hover { background-color: #CEEAD6; }
 
         /* ==== LOADING & MESSAGES ==== */
         .loading-indicator { text-align: center; padding: 60px 20px; color: #667085; }
@@ -88,6 +88,100 @@
         .no-data-message { text-align: center; padding: 60px 20px; color: #667085; }
         .no-data-message i { font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.3; }
         .no-data-message p { font-size: 1.1rem; margin-bottom: 20px; }
+
+        /* ==== CUSTOM MODAL STYLES (SỬA LỖI UI) ==== */
+        .custom-modal-overlay {
+            display: none; /* Mặc định ẩn */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Nền tối bán trong suốt */
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal-dialog {
+            background-color: #fff;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .custom-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #E0E0E0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1D2B4F;
+            margin: 0;
+        }
+
+        .custom-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #667085;
+            transition: color 0.2s;
+        }
+        .custom-close-btn:hover { color: #DE350B; }
+
+        .custom-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .custom-table th, .custom-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #F0F2F5;
+        }
+        .custom-table th {
+            background-color: #F8F9FA;
+            font-weight: 600;
+            color: #1D2B4F;
+        }
+
+        .custom-modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #E0E0E0;
+            text-align: right;
+            background-color: #F8F9FA;
+        }
+        .btn-secondary {
+            background-color: #FFFFFF;
+            color: #333;
+            border: 1px solid #C1C7D0;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-secondary:hover { background-color: #F0F2F5; }
 
         /* ==== RESPONSIVE ==== */
         @media (max-width: 992px) {
@@ -146,7 +240,6 @@
             <p class="page-subtitle">Quản lý các khóa học và theo dõi hiệu suất của bạn</p>
         </header>
 
-        <!-- Statistics Cards -->
         <section class="stats-grid">
             <div class="stat-card revenue">
                 <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
@@ -165,7 +258,6 @@
             </div>
         </section>
 
-        <!-- Courses List -->
         <section class="content-section">
             <div class="section-header">
                 <h2 class="section-title">Danh sách khóa học của tôi</h2>
@@ -207,6 +299,38 @@
     </main>
 </div>
 
+<div class="custom-modal-overlay" id="studentsModal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title" id="studentsModalLabel">Danh sách học viên</h5>
+            <button type="button" class="custom-close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="custom-modal-body">
+            <div class="table-responsive">
+                <table class="custom-table" id="studentsTable">
+                    <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Ngày đăng ký</th>
+                    </tr>
+                    </thead>
+                    <tbody id="studentsTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="studentsLoading" class="loading-indicator" style="display: none; padding: 20px;">
+                <i class="fas fa-spinner"></i>
+                <span>Đang tải...</span>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Đóng</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const API_BASE_URL = 'http://localhost:8080/api';
     const totalRevenueSpan = document.getElementById('total-revenue');
@@ -217,6 +341,7 @@
     const coursesTableContainer = document.getElementById('courses-table-container');
     const noCoursesMessage = document.getElementById('no-courses-message');
     const logoutButton = document.getElementById('logout-button');
+    const studentsModal = document.getElementById('studentsModal');
 
     let token = localStorage.getItem('token');
     let currentUserRole = localStorage.getItem('userRole');
@@ -234,7 +359,7 @@
     function updateSidebarVisibility() {
         // 1. Lấy thông tin đăng nhập từ localStorage
         const token = localStorage.getItem('token');
-        const userRole = localStorage.getItem('userRole'); // 'STUDENT', 'INSTRUCTOR', 'ADMIN'
+        const userRole = localStorage.getItem('userRole');
 
         // 2. Lấy TẤT CẢ các mục menu bằng ID
         const menuBrowse = document.getElementById('menu-browse');
@@ -249,7 +374,7 @@
         if (menuMyCourses) menuMyCourses.style.display = 'none';
         if (menuInstructorDashboard) menuInstructorDashboard.style.display = 'none';
         if (menuAdminDashboard) menuAdminDashboard.style.display = 'none';
-        if (menuAdminUsers) menuAdminUsers.style.display = 'none'; // Ẩn mục Người Dùng (bạn không yêu cầu)
+        if (menuAdminUsers) menuAdminUsers.style.display = 'none';
         if (menuLogin) menuLogin.style.display = 'none';
         if (menuLogout) menuLogout.style.display = 'none';
 
@@ -258,10 +383,8 @@
 
         // 5. Xử lý logic Đăng nhập / Đăng xuất
         if (token) {
-            // --- ĐÃ ĐĂNG NHẬP ---
             if (menuLogout) menuLogout.style.display = 'block';
 
-            // 6. Xử lý hiển thị theo vai trò (Role)
             if (userRole === 'STUDENT') {
                 if (menuMyCourses) menuMyCourses.style.display = 'block';
 
@@ -270,52 +393,37 @@
 
             } else if (userRole === 'ADMIN') {
                 if (menuAdminDashboard) menuAdminDashboard.style.display = 'block';
-                // Lưu ý: Theo yêu cầu của bạn, 'menu-users' không hiển thị
             }
 
         } else {
-            // --- CHƯA ĐĂNG NHẬP ---
             if (menuLogin) menuLogin.style.display = 'block';
         }
     }
-    /**
-     * Hàm mới: Tự động đánh dấu "active" cho mục menu của trang hiện tại.
-     */
-    function setActiveMenuItem() {
-        // 1. Lấy tên file của trang hiện tại (ví dụ: "index.html", "my_courses.html")
-        const currentPage = window.location.pathname.split('/').pop();
 
-        // 2. Định nghĩa trang nào tương ứng với ID mục menu nào
+    function setActiveMenuItem() {
+        const currentPage = window.location.pathname.split('/').pop();
         const pageToMenuId = {
             'index.html': 'menu-browse',
             'my_courses.html': 'menu-my-courses',
-            'course_learning.html': 'menu-my-courses', // 'Vào học' vẫn thuộc 'Khóa học của tôi'
+            'course_learning.html': 'menu-my-courses',
             'instructor_dashboard.html': 'menu-instructor-dashboard',
-            'create_course.html': 'menu-instructor-dashboard', // 'Tạo khóa học' thuộc Bảng ĐK
-            'edit_course.html': 'menu-instructor-dashboard', // 'Sửa' thuộc Bảng ĐK
-            'manage_lessons.html': 'menu-instructor-dashboard', // 'Quản lý bài học' thuộc Bảng ĐK
+            'create_course.html': 'menu-instructor-dashboard',
+            'edit_course.html': 'menu-instructor-dashboard',
+            'manage_lessons.html': 'menu-instructor-dashboard',
             'login.html': 'menu-login'
-            // Thêm các trang admin nếu cần
-            // 'admin_dashboard.html': 'menu-dashboard',
-            // 'admin_users.html': 'menu-users',
         };
 
-        // 3. Tìm ID của mục menu cần active (mặc định là 'menu-browse' nếu không tìm thấy)
         const activeMenuId = pageToMenuId[currentPage] || 'menu-browse';
-
-        // 4. Xóa class "active" khỏi TẤT CẢ các mục
         document.querySelectorAll('.sidebar-nav li').forEach(li => {
             li.classList.remove('active');
         });
 
-        // 5. Thêm class "active" cho ĐÚNG mục menu
         const activeMenuItem = document.getElementById(activeMenuId);
         if (activeMenuItem) {
             activeMenuItem.classList.add('active');
         }
     }
 
-    // Handle logout
     function handleLogout() {
         if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
             localStorage.removeItem('token');
@@ -329,31 +437,21 @@
     // Fetch Instructor Data
     async function fetchInstructorData() {
         try {
-            // Fetch Revenue Data (Tổng doanh thu và tổng học viên đã thanh toán)
             const revenueResponse = await fetch(`${API_BASE_URL}/instructor/courses/revenue`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (revenueResponse.ok) {
                 const revenueData = await revenueResponse.json();
-                // Hiển thị tổng doanh thu (từ học viên đã thanh toán)
                 totalRevenueSpan.textContent = formatCurrency(revenueData.result.totalRevenue || 0);
-                // Hiển thị tổng số học viên đã thanh toán
                 totalStudentsSpan.textContent = revenueData.result.totalEnrollments || 0;
-                // Hiển thị tổng số khóa học
                 totalCoursesSpan.textContent = revenueData.result.totalCourses || 0;
             } else if (revenueResponse.status === 401 || revenueResponse.status === 403) {
                 alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
                 handleLogout();
                 return;
-            } else {
-                console.error('Failed to fetch revenue:', await revenueResponse.text());
-                totalRevenueSpan.textContent = 'Lỗi';
-                totalStudentsSpan.textContent = 'Lỗi';
-                totalCoursesSpan.textContent = 'Lỗi';
             }
 
-            // Fetch My Courses Data (danh sách khóa học với thống kê enrollment và revenue)
             const coursesResponse = await fetch(`${API_BASE_URL}/instructor/courses/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -372,7 +470,6 @@
                 alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
                 handleLogout();
             } else {
-                console.error('Failed to fetch instructor courses:', await coursesResponse.text());
                 noCoursesMessage.style.display = 'block';
             }
 
@@ -389,6 +486,10 @@
         courses.forEach(course => {
             const statusClass = `status-${course.status}`;
             const row = document.createElement('tr');
+
+            // Xử lý chuỗi để tránh lỗi JS khi truyền vào hàm onclick
+            const safeTitle = course.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
             row.innerHTML = `
                 <td class="course-title-cell">${escapeHtml(course.title)}</td>
                 <td><span class="status-badge ${statusClass}">${getDisplayStatus(course.status)}</span></td>
@@ -407,9 +508,9 @@
                         <button onclick="submitCourseForApproval(${course.courseId})" class="btn-action submit" title="Gửi duyệt">
                             <i class="fas fa-paper-plane"></i> Gửi duyệt
                         </button>` : ''}
-                        <a href="view_students.html?courseId=${course.courseId}" class="btn-action students" title="Xem học viên">
+                        <button class="btn-action students" onclick="showCourseStudents(${course.courseId}, '${safeTitle}')" title="Xem danh sách học viên">
                             <i class="fas fa-users"></i> Học viên
-                        </a>
+                        </button>
                     </div>
                 </td>
             `;
@@ -437,7 +538,6 @@
         return div.innerHTML;
     }
 
-    // Submit course for approval
     async function submitCourseForApproval(courseId) {
         if (!confirm('Bạn có chắc chắn muốn gửi khóa học này để duyệt không?')) {
             return;
@@ -468,6 +568,87 @@
         }
     }
 
+    // === LOGIC MODAL MỚI (KHÔNG CẦN BOOTSTRAP JS) ===
+
+    // Mở Modal
+    async function showCourseStudents(courseId, courseTitle) {
+        document.getElementById('studentsModalLabel').textContent = `Học viên khóa: ${courseTitle}`;
+        const tableBody = document.getElementById('studentsTableBody');
+        const loadingDiv = document.getElementById('studentsLoading');
+
+        // Reset & Show Modal
+        tableBody.innerHTML = '';
+        loadingDiv.style.display = 'block';
+        studentsModal.style.display = 'flex'; // Sử dụng flex để căn giữa
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/students`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể tải danh sách học viên.');
+            }
+
+            const data = await response.json();
+
+            if (data.code === 200) {
+                renderStudentsTable(data.result);
+            } else {
+                alert(`Lỗi: ${data.message}`);
+                closeModal();
+            }
+        } catch (error) {
+            console.error('Error fetching students:', error);
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Có lỗi xảy ra khi tải dữ liệu.</td></tr>`;
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    }
+
+    // Đóng Modal
+    function closeModal() {
+        studentsModal.style.display = 'none';
+    }
+
+    // Đóng Modal khi click ra ngoài vùng dialog
+    window.onclick = function(event) {
+        if (event.target == studentsModal) {
+            closeModal();
+        }
+    }
+
+    function renderStudentsTable(students) {
+        const tableBody = document.getElementById('studentsTableBody');
+
+        if (!students || students.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Chưa có học viên nào đăng ký khóa học này.</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        students.forEach((student, index) => {
+            let enrolledDate = 'N/A';
+            if (student.enrolledAt) {
+                enrolledDate = new Date(student.enrolledAt).toLocaleDateString('vi-VN');
+            }
+
+            html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${student.fullName}</td>
+                <td><a href="mailto:${student.email}" style="color: #0052CC; text-decoration: none;">${student.email}</a></td>
+                <td>${enrolledDate}</td>
+            </tr>
+        `;
+        });
+
+        tableBody.innerHTML = html;
+    }
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {

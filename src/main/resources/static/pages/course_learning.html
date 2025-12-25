@@ -549,12 +549,27 @@
 
     // --- Chuyển đổi link Google Drive ---
     function formatEmbedLink(url) {
-      if (url && url.includes("drive.google.com/file/d/") && url.includes("/view")) {
-        // Chuyển đổi link 'view' thành 'preview'
+      if (!url) return '';
+
+      // 1. Xử lý Google Drive
+      if (url.includes("drive.google.com/file/d/") && url.includes("/view")) {
         return url.replace("/view", "/preview");
       }
-      // (Có thể thêm logic cho Youtube)
-      return url; // Trả về link gốc nếu không khớp
+
+      // 2. Xử lý YouTube (Mới thêm)
+      // Chuyển từ 'watch?v=' hoặc 'youtu.be/' sang 'embed/'
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+
+        // ID video youtube luôn có 11 ký tự
+        if (match && match[2].length === 11) {
+          return 'https://www.youtube.com/embed/' + match[2];
+        }
+      }
+
+      // Trả về link gốc nếu không khớp quy tắc nào
+      return url;
     }
 
     // --- Hàm đăng xuất ---

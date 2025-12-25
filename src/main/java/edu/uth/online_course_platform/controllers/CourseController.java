@@ -4,10 +4,7 @@ import edu.uth.online_course_platform.dto.request.CreateCourseRequest;
 import edu.uth.online_course_platform.dto.request.CreateLessonRequest;
 import edu.uth.online_course_platform.dto.request.UpdateCourseRequest;
 import edu.uth.online_course_platform.dto.request.UpdateLessonRequest; // Thêm import này
-import edu.uth.online_course_platform.dto.response.ApiResponse;
-import edu.uth.online_course_platform.dto.response.CourseResponse;
-import edu.uth.online_course_platform.dto.response.InstructorRevenueResponse;
-import edu.uth.online_course_platform.dto.response.LessonResponse;
+import edu.uth.online_course_platform.dto.response.*;
 import edu.uth.online_course_platform.services.CourseService;
 import edu.uth.online_course_platform.services.LessonService;
 import jakarta.validation.Valid;
@@ -68,7 +65,16 @@ public class CourseController {
                 )
         );
     }
+    //  Lấy danh sách học viên của một khóa học
+    @GetMapping("/{courseId}/students")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<ApiResponse<List<StudentEnrollmentResponse>>> getEnrolledStudents(
+            @PathVariable Long courseId) {
 
+        List<StudentEnrollmentResponse> students = courseService.getEnrolledStudentsForInstructor(courseId);
+
+        return ResponseEntity.ok(new ApiResponse<>(200, "Lấy danh sách học viên thành công", students));
+    }
 
     // Submit course for approval - Nghiệp vụ đã có
     @PostMapping("/{courseId}/submit")

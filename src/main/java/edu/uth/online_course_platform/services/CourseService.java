@@ -6,6 +6,7 @@ import edu.uth.online_course_platform.dto.request.UpdateCourseRequest;
 import edu.uth.online_course_platform.dto.response.CourseResponse;
 import edu.uth.online_course_platform.dto.response.InstructorRevenueResponse;
 import edu.uth.online_course_platform.dto.response.LessonResponse;
+import edu.uth.online_course_platform.dto.response.StudentEnrollmentResponse;
 import edu.uth.online_course_platform.exceptions.AppException;
 import edu.uth.online_course_platform.exceptions.ErrorCode;
 import edu.uth.online_course_platform.exceptions.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import edu.uth.online_course_platform.models.Course;
 import edu.uth.online_course_platform.models.Lesson;
 import edu.uth.online_course_platform.models.User;
 import edu.uth.online_course_platform.repositories.CourseRepository;
+import edu.uth.online_course_platform.repositories.EnrollmentRepository;
 import edu.uth.online_course_platform.repositories.PaymentRepository;
 import edu.uth.online_course_platform.until.AuthorizationService;
 import edu.uth.online_course_platform.until.Mapper;
@@ -35,6 +37,7 @@ public class CourseService {
     private final AuthorizationService authorizationService;
     private final Mapper mapper;
     private final FileStorageService fileStorageService;
+    private final EnrollmentRepository enrollmentRepository;
     // Create new Course
     @Transactional
     public CourseResponse createNewCourse(CreateCourseRequest createCourseRequest) {
@@ -102,6 +105,21 @@ public class CourseService {
                     return response;
                 })
                 .collect(Collectors.toList());
+    }
+    public List<StudentEnrollmentResponse> getEnrolledStudentsForInstructor(Long courseId) {
+        User currentInstructor = authorizationService.getCurrentUser();
+
+        // 1. Kiểm tra khóa học có tồn tại không
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+
+        // 2. QUAN TRỌNG: Kiểm tra xem giảng viên hiện tại có phải là chủ sở hữu khóa học không
+        if (!course.getInstructor().getUserId().equals(currentInstructor.getUserId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 3. Gọi repository lấy danh sách
+        return enrollmentRepository.findStudentsByCourseId(courseId);
     }
 
     // Lấy chi tiết một khóa học cụ thể của giảng viên (cho trang edit_course) - Nghiệp vụ đã bổ sung
